@@ -235,3 +235,7 @@ so S4b and S4c can move after S5 if export is wanted sooner.
   is not only a start point), a `features` shape's default centre is the anchor average, and
   `toShape()` maps the unit square to the component rather than fitting the bounds. S1b and S3
   implement those.
+- 2026-09-28: the S1 gate showed the engine's own tests import it through the package's
+  self-reference, so they did not prove a second workspace can consume it. `web` now depends on the
+  engine package from S1, with a test that imports it, and the deploy packages the engine before it
+  builds the site; S3 no longer carries that wiring.

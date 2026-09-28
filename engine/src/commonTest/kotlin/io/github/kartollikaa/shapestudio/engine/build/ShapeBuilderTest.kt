@@ -61,6 +61,15 @@ class ShapeBuilderTest {
     }
 
     @Test
+    fun polygonRoundingIsPassedToTheLibrary() {
+        val built = ShapeEngine.build(
+            """{"v":1,"shape":{"kind":"polygon","vertices":[[0,0],[1,0],[0.5,1]],"rounding":{"radius":0.2,"smoothing":0.4}}}""",
+        )
+        val expected = RoundedPolygon(vertices = floatArrayOf(0f, 0f, 1f, 0f, 0.5f, 1f), rounding = CornerRounding(0.2f, 0.4f))
+        assertContentEquals(expected.flatCubics(), built.cubics)
+    }
+
+    @Test
     fun polygonDefaultsAreTheLibrarysDefaults() {
         val built = ShapeEngine.build("""{"v":1,"shape":{"kind":"polygon","vertices":[[0,0],[1,0],[0.5,1]]}}""")
         assertContentEquals(RoundedPolygon(vertices = floatArrayOf(0f, 0f, 1f, 0f, 0.5f, 1f)).flatCubics(), built.cubics)
