@@ -6,6 +6,8 @@ describe("placeholder page", () => {
   it("names the project and states that it is independent of Google", () => {
     render(<App />);
     expect(screen.getByRole("heading", { level: 1, name: "Material Shape Studio" })).toBeTruthy();
-    expect(screen.getByText(/not affiliated with or endorsed by Google/)).toBeTruthy();
+    expect(
+      screen.getByText(/An independent open-source project, not affiliated with or endorsed by Google\./),
+    ).toBeTruthy();
   });
 });
