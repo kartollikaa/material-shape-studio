@@ -1,0 +1,1 @@
+{"v": 1, "shape": {"kind": "polygon", "vertices": [[0, 0], [1, 0], [0.5, 1]], "rounding": {"radius": 0.1}}, "transforms": [{"type": "translate", "x": 1, "y": -1}, {"type": "scale", "x": 2, "y": 3}]}

@@ -1,0 +1,1 @@
+{"v": 1, "shape": {"kind": "ngon", "vertices": 3, "rounding": {"radius": 0.2}}, "transforms": [{"type": "rotate", "degrees": -90}, {"type": "normalize"}]}

@@ -1,0 +1,1 @@
+{"v": 1, "shape": {"kind": "star", "verticesPerRadius": 5, "innerRadius": 0.5, "rounding": {"radius": 0.1}}, "transforms": [{"type": "scale", "x": 3, "y": 0.5}, {"type": "fillSquare"}]}

@@ -1,0 +1,1 @@
+{"v": 1, "shape": {"kind": "pillStar", "width": 3, "height": 1.5, "verticesPerRadius": 10, "innerRadiusRatio": 0.7, "rounding": {"radius": 0.1}, "innerRounding": {"radius": 0.2, "smoothing": 0.5}, "vertexSpacing": 0.3, "startLocation": 0.25, "center": [1, 2]}}

@@ -61,11 +61,11 @@ val jsPackage = tasks.register<Sync>("jsPackage") {
 tasks.named("assemble") { dependsOn(jsPackage) }
 
 tasks.named<Test>("jvmTest") {
-    val fixtures = layout.projectDirectory.dir("fixtures")
-    inputs.dir(fixtures).withPropertyName("fixtures")
-    systemProperty("fixtures.dir", fixtures.asFile.absolutePath)
-    if (providers.gradleProperty("updateFixtures").isPresent) {
+    inputs.dir(layout.projectDirectory.dir("fixtures")).withPropertyName("fixtures").withPathSensitivity(PathSensitivity.RELATIVE)
+    systemProperty("fixtures.dir", "fixtures")
+    if (providers.gradleProperty("updateFixtures").map { it != "false" }.getOrElse(false)) {
         systemProperty("fixtures.update", "true")
         outputs.upToDateWhen { false }
+        outputs.cacheIf { false }
     }
 }
