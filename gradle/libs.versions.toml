@@ -1,9 +1,12 @@
 [versions]
 kotlin = "2.4.20"
 graphics-shapes = "1.1.0"
+kotlinx-serialization = "1.11.0"
 
 [libraries]
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
