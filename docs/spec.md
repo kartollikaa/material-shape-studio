@@ -107,6 +107,10 @@ Rules:
   as there. It changes the geometry, so it is a real transform. Compose then recentres every
   `toShape()` outline by its bounds when it draws; the engine does not recentre, and the preview
   does that step (§6).
+- `fillSquare` refuses a shape flatter than the library's 1e-4 distance epsilon. The library's
+  `calculateBounds` starts its maxima at `Float.MIN_VALUE`, so for a shape lying wholly at negative
+  coordinates `bounds` and `normalize` differ from the true extent; the engine keeps that, as Compose
+  does, and a fixture pins it.
 - Transforms apply in order after the shape is built. New documents created in the editor start with
   `[normalize]`; the export panel warns when the final bounds leave the unit square, because Compose's
   `toShape()` scales the unit square to the component size.
@@ -143,7 +147,7 @@ buildCubics(doc: string): Float32Array         // the cubics only, for hot paths
 matchCatalogue(doc: string): string | null     // catalogue name or null
 createMorph(docA: string, docB: string): number   // handle; both documents are built once
 morphCubics(handle: number, progress: number): Float32Array
-morphBounds(handle: number): Float32Array      // [left, top, right, bottom] over all progress
+morphBounds(handle: number): Float32Array      // [left, top, right, bottom] holding the outline at any progress
 releaseMorph(handle: number): void
 parseSvgPath(d: string): string                // JSON: Feature[]
 serializeFeatures(features: string): string    // Feature[] JSON in, "V1..." string out
