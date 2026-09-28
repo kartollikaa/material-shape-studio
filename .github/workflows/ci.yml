@@ -26,8 +26,8 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - name: Engine tests
-        run: ./gradlew check
+      - name: Engine tests and package
+        run: ./gradlew build
       - name: Install
         run: npm ci
       - name: Web tests
