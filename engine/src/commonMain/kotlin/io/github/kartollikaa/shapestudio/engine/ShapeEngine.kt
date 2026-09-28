@@ -2,14 +2,14 @@ package io.github.kartollikaa.shapestudio.engine
 
 import io.github.kartollikaa.shapestudio.engine.build.flatCubics
 import io.github.kartollikaa.shapestudio.engine.build.toRoundedPolygon
-import io.github.kartollikaa.shapestudio.engine.document.DocumentJson
+import io.github.kartollikaa.shapestudio.engine.document.decodeDocument
 import io.github.kartollikaa.shapestudio.engine.document.ShapeDocument
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 object ShapeEngine {
-    fun parse(json: String): ShapeDocument = DocumentJson.decodeFromString(ShapeDocument.serializer(), json)
+    fun parse(json: String): ShapeDocument = decodeDocument(json)
 
     fun build(json: String): BuiltShape {
         val polygon = parse(json).toRoundedPolygon()
