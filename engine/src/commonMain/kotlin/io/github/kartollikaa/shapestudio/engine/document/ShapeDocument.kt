@@ -53,6 +53,60 @@ sealed interface Shape {
         val rounding: Rounding? = null,
         val perVertexRounding: List<Rounding>? = null,
     ) : Shape
+
+    @Serializable
+    @SerialName("circle")
+    data class Circle(val vertices: Int? = null, val radius: Float? = null, val center: Point? = null) : Shape
+
+    @Serializable
+    @SerialName("rectangle")
+    data class Rectangle(
+        val width: Float? = null,
+        val height: Float? = null,
+        val center: Point? = null,
+        val rounding: Rounding? = null,
+        val perVertexRounding: List<Rounding>? = null,
+    ) : Shape
+
+    @Serializable
+    @SerialName("star")
+    data class Star(
+        val verticesPerRadius: Int,
+        val radius: Float? = null,
+        val innerRadius: Float? = null,
+        val center: Point? = null,
+        val rounding: Rounding? = null,
+        val innerRounding: Rounding? = null,
+        val perVertexRounding: List<Rounding>? = null,
+    ) : Shape
+
+    @Serializable
+    @SerialName("pill")
+    data class Pill(
+        val width: Float? = null,
+        val height: Float? = null,
+        val smoothing: Float? = null,
+        val center: Point? = null,
+    ) : Shape
+
+    @Serializable
+    @SerialName("pillStar")
+    data class PillStar(
+        val width: Float? = null,
+        val height: Float? = null,
+        val verticesPerRadius: Int? = null,
+        val innerRadiusRatio: Float? = null,
+        val rounding: Rounding? = null,
+        val innerRounding: Rounding? = null,
+        val perVertexRounding: List<Rounding>? = null,
+        val vertexSpacing: Float? = null,
+        val startLocation: Float? = null,
+        val center: Point? = null,
+    ) : Shape
+
+    @Serializable
+    @SerialName("features")
+    data class Features(val serialized: String, val center: Point? = null) : Shape
 }
 
 @Serializable

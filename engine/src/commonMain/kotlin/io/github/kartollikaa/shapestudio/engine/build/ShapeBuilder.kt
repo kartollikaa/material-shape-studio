@@ -1,7 +1,13 @@
 package io.github.kartollikaa.shapestudio.engine.build
 
 import androidx.graphics.shapes.CornerRounding
+import androidx.graphics.shapes.FeatureSerializer
 import androidx.graphics.shapes.RoundedPolygon
+import androidx.graphics.shapes.circle
+import androidx.graphics.shapes.pill
+import androidx.graphics.shapes.pillStar
+import androidx.graphics.shapes.rectangle
+import androidx.graphics.shapes.star
 import io.github.kartollikaa.shapestudio.engine.document.Point
 import io.github.kartollikaa.shapestudio.engine.document.Repeat
 import io.github.kartollikaa.shapestudio.engine.document.Rounding
@@ -32,6 +38,55 @@ private fun Shape.toRoundedPolygon(): RoundedPolygon = when (this) {
     } else {
         repeated(repeat)
     }
+    is Shape.Circle -> RoundedPolygon.circle(
+        numVertices = vertices ?: 8,
+        radius = radius ?: 1f,
+        centerX = center?.x ?: 0f,
+        centerY = center?.y ?: 0f,
+    )
+    is Shape.Rectangle -> RoundedPolygon.rectangle(
+        width = width ?: 2f,
+        height = height ?: 2f,
+        rounding = rounding.toCornerRounding(),
+        perVertexRounding = perVertexRounding?.map { it.toCornerRounding() },
+        centerX = center?.x ?: 0f,
+        centerY = center?.y ?: 0f,
+    )
+    is Shape.Star -> RoundedPolygon.star(
+        numVerticesPerRadius = verticesPerRadius,
+        radius = radius ?: 1f,
+        innerRadius = innerRadius ?: 0.5f,
+        rounding = rounding.toCornerRounding(),
+        innerRounding = innerRounding?.toCornerRounding(),
+        perVertexRounding = perVertexRounding?.map { it.toCornerRounding() },
+        centerX = center?.x ?: 0f,
+        centerY = center?.y ?: 0f,
+    )
+    is Shape.Pill -> RoundedPolygon.pill(
+        width = width ?: 2f,
+        height = height ?: 1f,
+        smoothing = smoothing ?: 0f,
+        centerX = center?.x ?: 0f,
+        centerY = center?.y ?: 0f,
+    )
+    is Shape.PillStar -> RoundedPolygon.pillStar(
+        width = width ?: 2f,
+        height = height ?: 1f,
+        numVerticesPerRadius = verticesPerRadius ?: 8,
+        innerRadiusRatio = innerRadiusRatio ?: 0.5f,
+        rounding = rounding.toCornerRounding(),
+        innerRounding = innerRounding?.toCornerRounding(),
+        perVertexRounding = perVertexRounding?.map { it.toCornerRounding() },
+        vertexSpacing = vertexSpacing ?: 0.5f,
+        startLocation = startLocation ?: 0f,
+        centerX = center?.x ?: 0f,
+        centerY = center?.y ?: 0f,
+    )
+    is Shape.Features -> RoundedPolygon(
+        features = FeatureSerializer.parse(serialized),
+        centerX = center?.x ?: Float.NaN,
+        centerY = center?.y ?: Float.NaN,
+    )
 }
 
 private val materialSliceCentre = Point(0.5f, 0.5f)

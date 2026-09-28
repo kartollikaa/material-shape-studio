@@ -61,6 +61,7 @@ private fun ShapeDocument.validate() {
             s.perVertexRounding?.let { checkPerVertex(it, s.vertices) }
             s.rounding?.check("shape.rounding")
         }
+        is Shape.Circle, is Shape.Rectangle, is Shape.Star, is Shape.Pill, is Shape.PillStar, is Shape.Features -> Unit
     }
 }
 
