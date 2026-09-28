@@ -6,7 +6,12 @@ const hexagon = JSON.stringify({
   shape: { kind: "ngon", vertices: 6, radius: 2, center: [1, 2], rounding: { radius: 0.2 } },
 });
 
-type Built = { cubics: number[]; bounds: [number, number, number, number]; center: [number, number] };
+type Built = {
+  cubics: number[];
+  bounds: [number, number, number, number];
+  center: [number, number];
+  features: { type: string; cubics: number[] }[];
+};
 
 describe("build", () => {
   it("buildCubics returns eight numbers per cubic, equal to build's cubics", () => {
@@ -41,6 +46,18 @@ describe("build", () => {
 
   it("center is the polygon's centre", () => {
     expect((JSON.parse(build(hexagon)) as Built).center).toEqual([1, 2]);
+  });
+
+  it("lists the shape's features with their types and cubics", () => {
+    const star = JSON.stringify({ v: 1, shape: { kind: "star", verticesPerRadius: 5, rounding: { radius: 0.1 } } });
+    const { features } = JSON.parse(build(star)) as Built;
+    const types = new Set(features.map((f) => f.type));
+    expect(types.has("convex")).toBe(true);
+    expect(types.has("concave")).toBe(true);
+    for (const f of features) {
+      expect(["convex", "concave", "edge", "ignorable"]).toContain(f.type);
+      expect(f.cubics.length % 8).toBe(0);
+    }
   });
 
   it("an invalid document throws an Error whose message names the field", () => {

@@ -1,6 +1,7 @@
 package io.github.kartollikaa.shapestudio.engine.build
 
 import androidx.graphics.shapes.CornerRounding
+import androidx.graphics.shapes.Cubic
 import androidx.graphics.shapes.FeatureSerializer
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.circle
@@ -115,9 +116,11 @@ internal fun Rounding?.toCornerRounding(): CornerRounding =
 internal fun List<Point>.flatten(): FloatArray =
     FloatArray(size * 2) { i -> this[i / 2].let { if (i % 2 == 0) it.x else it.y } }
 
-internal fun RoundedPolygon.flatCubics(): FloatArray {
-    val out = FloatArray(cubics.size * 8)
-    cubics.forEachIndexed { i, c ->
+internal fun RoundedPolygon.flatCubics(): FloatArray = cubics.flatCubics()
+
+internal fun List<Cubic>.flatCubics(): FloatArray {
+    val out = FloatArray(size * 8)
+    forEachIndexed { i, c ->
         val o = i * 8
         out[o] = c.anchor0X
         out[o + 1] = c.anchor0Y
