@@ -67,7 +67,7 @@ regenerate them:
 ./gradlew :engine:jvmTest -PupdateFixtures
 ```
 
-Production size of the engine, measured when S1 landed: 331.3 KB minified, 82.5 KB gzipped.
+Production size of the engine, measured when S1 landed: 333.5 KB minified, 83.1 KB gzipped.
 Re-measure it with:
 
 ```bash
