@@ -7,5 +7,8 @@ code for the platforms that have a port of `androidx.graphics.shapes`, plus SVG,
 An independent open-source project, not affiliated with or endorsed by Google. Material Design is a
 trademark of Google LLC.
 
-Nothing is built yet. Start with `docs/research/feasibility.md` (why and how) and
-`docs/research/kickoff-prompt.md` (the prompt that starts the work).
+Nothing is built yet. Read in this order:
+
+1. [docs/spec.md](docs/spec.md): what the app does and how its parts fit.
+2. [docs/decomposition.md](docs/decomposition.md): the delivery plan, one pull request per slice.
+3. [docs/research/feasibility.md](docs/research/feasibility.md): why this design, and the prior art.
