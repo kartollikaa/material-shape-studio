@@ -64,6 +64,34 @@ class ValidationTest {
         )
     }
 
+    @Test
+    fun unknownKeyWithTheKindLastStillNamesTheShape() =
+        assertRejected("shape", """{"v":1,"shape":{"vertex":4,"kind":"ngon"}}""")
+
+    @Test
+    fun wrongPointWithTheKindLastNamesThePoint() =
+        assertRejected("shape.vertices[0]", """{"v":1,"shape":{"vertices":[[0],[1,0],[0.5,1]],"kind":"polygon"}}""")
+
+    @Test
+    fun pointWithThreeCoordinatesNamesThePoint() =
+        assertRejected("shape.vertices[1]", """{"v":1,"shape":{"kind":"polygon","vertices":[[0,0],[1,0,5],[0.5,1]]}}""")
+
+    @Test
+    fun centreWithOneCoordinateNamesIt() =
+        assertRejected("shape.center", """{"v":1,"shape":{"kind":"ngon","vertices":4,"center":[1]}}""")
+
+    @Test
+    fun unknownKeyInsideRoundingNamesTheRounding() = assertRejected(
+        "shape.rounding",
+        """{"v":1,"shape":{"kind":"ngon","vertices":4,"rounding":{"radius":0.1,"smooth":0.2}}}""",
+    )
+
+    @Test
+    fun unknownKeyInATransformWithTheTypeLastNamesTheTransform() = assertRejected(
+        "transforms[0]",
+        """{"v":1,"shape":{"kind":"ngon","vertices":4},"transforms":[{"extra":1,"type":"normalize"}]}""",
+    )
+
     private fun assertRejected(field: String, json: String) {
         val error = assertFailsWith<DocumentException> { ShapeEngine.parse(json) }
         assertEquals(field, error.field)

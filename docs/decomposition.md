@@ -34,7 +34,7 @@ Status values: `planned · in-progress · in-review · merged · dropped`
 
 Every slice is naturally safe: the site is additive and each slice ships a complete capability, so
 no feature toggles and no cleanup slices are needed. Budgets above 600 (S1b, S3, S5, S8) carry a
-named re-cut in their details; the diff is sized before the PR opens. S5 depends on S4 core only,
+named re-cut or a size justification in their details; the diff is sized before the PR opens. S5 depends on S4 core only,
 so S4b and S4c can move after S5 if export is wanted sooner.
 
 ## Slice details
@@ -78,7 +78,7 @@ so S4b and S4c can move after S5 if export is wanted sooner.
   the build result; the morph handles `createMorph`, `morphCubics`, `morphBounds`, `releaseMorph`;
   fixtures for every new kind and transform.
 - **Out of scope:** the catalogue (S2); SVG import (S7).
-- **Acceptance:** (1) every kind in spec §3 builds to the same cubics as its library constructor on
+- **Acceptance:** (1) every kind in spec §3 except `catalogue` builds to the same cubics as its library constructor on
   both targets; (2) each transform has a fixture and a test of its documented geometry; (3) parity
   holds for every new fixture; (4) morph handles return cubics at any progress, match the fixture
   at 0, 0.5 and 1, and a released handle throws; (5) the new validation rules name their field.

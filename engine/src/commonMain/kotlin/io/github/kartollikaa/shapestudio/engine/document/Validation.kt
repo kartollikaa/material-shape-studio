@@ -22,7 +22,7 @@ internal fun decodeDocument(json: String): ShapeDocument {
     }
     precheck(root)
     val document = try {
-        DocumentJson.decodeFromString(ShapeDocument.serializer(), json)
+        DocumentJson.decodeFromString(ShapeDocument.serializer(), (root as JsonObject).withDiscriminatorsFirst().toString())
     } catch (e: SerializationException) {
         val message = e.message.orEmpty().lineSequence().first()
         reject(message.pathOrNull() ?: "document", message)
@@ -38,6 +38,8 @@ private fun precheck(root: JsonElement) {
     val shape = root["shape"] as? JsonObject ?: reject("shape", "expected an object with a kind")
     val kind = (shape["kind"] as? JsonPrimitive)?.content
     if (kind !in shapeKinds) reject("shape.kind", "unknown kind $kind; expected one of ${shapeKinds.joinToString()}")
+    (shape["vertices"] as? JsonArray)?.forEachIndexed { i, point -> checkPoint(point, "shape.vertices[$i]") }
+    shape["center"]?.let { checkPoint(it, "shape.center") }
     (root["transforms"] as? JsonArray)?.forEachIndexed { i, transform ->
         val type = ((transform as? JsonObject)?.get("type") as? JsonPrimitive)?.content
         if (type !in transformTypes) {
@@ -45,6 +47,28 @@ private fun precheck(root: JsonElement) {
         }
     }
 }
+
+private fun checkPoint(point: JsonElement, field: String) {
+    if (point is JsonArray && point.size != 2) reject(field, "a point is [x, y], got ${point.size} numbers")
+}
+
+// The decoder reports exact paths only while it streams, which it stops doing once a discriminator comes late.
+private fun JsonObject.withDiscriminatorsFirst(): JsonObject = JsonObject(
+    mapValues { (key, value) ->
+        when {
+            key == "shape" && value is JsonObject -> value.leading("kind")
+            key == "transforms" && value is JsonArray -> JsonArray(value.map { (it as? JsonObject)?.leading("type") ?: it })
+            else -> value
+        }
+    },
+)
+
+private fun JsonObject.leading(key: String): JsonObject = JsonObject(
+    buildMap {
+        this@leading[key]?.let { put(key, it) }
+        putAll(this@leading.filterKeys { it != key })
+    },
+)
 
 private fun ShapeDocument.validate() {
     when (val s = shape) {
