@@ -20,7 +20,9 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 | S1 | `feature/s1-engine-facade` | The engine builds any document to cubics in JVM and JS, proven equal by golden fixtures, with its bundle size known | safe | ~800 | S0 | planned |
 | S2 | `feature/s2-catalogue` | The 35 catalogue shapes as vendored documents, proven equal to Compose's `MaterialShapes` | safe | ~500 | S1 | planned |
 | S3 | `feature/s3-ui-shell` | A site that shows the catalogue with a live preview and carries the document in the URL | safe | ~650 | S2 | planned |
-| S4 | `feature/s4-editor` | Create and edit any document kind with sliders, a draggable repeat-and-mirror polygon and a transforms list | safe | ~700 | S3 | planned |
+| S4 | `feature/s4-editor-core` | Create and edit any document kind with sliders and numeric inputs, drag slice vertices, edit the transforms list | safe | ~600 | S3 | planned |
+| S4b | `feature/s4b-direct-manipulation` | Corner and builder handles on the canvas, vertex insert and delete, rotation ring, snapping | safe | ~600 | S4 | planned |
+| S4c | `feature/s4c-editor-conveniences` | Master rounding with overrides and presets, reset and compare, variations strip, undo and redo, shortcuts panel | safe | ~550 | S4 | planned |
 | S5 | `feature/s5-exporters` | Export Kotlin/Compose, SVG and CSS with copy buttons, the Kotlin output proven by a compiled round trip, plus the Playwright smoke test | safe | ~700 | S4 | planned |
 | S6 | `feature/s6-morph` | Pick a target, scrub and play a morph, export the Compose `Morph` snippet | safe | ~400 | S5 | planned |
 | S7 | `feature/s7-import` | Paste an SVG path, see and retype its features, keep it as a `features` document and export it | safe | ~600 | S5 | planned |
@@ -30,8 +32,9 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 Status values: `planned · in-progress · in-review · merged · dropped`
 
 Every slice is naturally safe: the site is additive and each slice ships a complete capability, so
-no feature toggles and no cleanup slices are needed. Budgets above 600 (S1, S3, S4, S5, S8) carry a
-named re-cut in their details; the diff is sized before the PR opens.
+no feature toggles and no cleanup slices are needed. Budgets above 600 (S1, S3, S5, S8) carry a
+named re-cut in their details; the diff is sized before the PR opens. S5 depends on S4 core only,
+so S4b and S4c can move after S5 if export is wanted sooner.
 
 ## Slice details
 
@@ -94,19 +97,46 @@ named re-cut in their details; the diff is sized before the PR opens.
 - **Ships safely because:** the catalogue is a complete feature; placeholders name what is next.
 - **Cleanup owed:** none.
 
-### S4 — `feature/s4-editor`
-- **In scope:** the kind selector, slider bindings for the builder kinds with the library's
-  ranges, the polygon canvas with draggable slice vertices and keyboard nudging, per-vertex radius
-  and smoothing, repeat count and mirror, the transforms list with reorder, three-decimal rounding
-  on write, the unit-square warning.
-- **Out of scope:** export (S5), features editing (S7).
-- **Acceptance:** (1) every kind in spec §3 can be created and every field edited from the UI;
-  (2) opening a catalogue shape shows Material's own parameters and reproduces it unchanged;
-  (3) dragging a vertex updates the document, the preview and the URL; (4) a validator error is
-  shown next to the control, never as a blank preview. Proof: vitest for bindings and reducer,
-  a recorded edit session in the PR body.
-- **Re-cut if over budget:** the polygon canvas ships as a follow-up PR `feature/s4b-polygon-canvas`.
+### S4 — `feature/s4-editor-core`
+- **In scope:** the kind selector, slider plus numeric input bindings for every numeric field with
+  the library's ranges, label scrubbing, the polygon canvas with draggable slice vertices and
+  ghosted repeated copies, keyboard nudging, per-vertex radius and smoothing controls, repeat count
+  and mirror, the transforms list with reorder, three-decimal rounding on write, the unit-square
+  warning, validator errors next to their control.
+- **Out of scope:** canvas handles beyond vertices (S4b), history and presets (S4c), export (S5).
+- **Acceptance:** (1) every kind in spec §3 can be created and every field edited from the
+  controls; (2) opening a catalogue shape shows Material's own parameters and reproduces it
+  unchanged; (3) dragging a vertex updates the document, the preview and the URL; (4) typing a
+  value or scrubbing a label writes the same field as the slider; (5) a validator error is shown
+  next to the control, never as a blank preview. Proof: vitest for bindings and reducer, a
+  recorded edit session in the PR body.
 - **Ships safely because:** the editor is complete for what it exposes.
+- **Cleanup owed:** none.
+
+### S4b — `feature/s4b-direct-manipulation`
+- **In scope:** radius and smoothing handles per corner with hover values, edge-midpoint insert
+  and Delete for vertices, handles for builder kinds (star outer and inner radius, pill width and
+  height, rectangle corner radius), the rotation ring writing a `rotate` transform, grid and axis
+  snapping with an Alt bypass, hit testing and pointer capture that work with touch.
+- **Out of scope:** new document fields; everything a handle does is already a control in S4.
+- **Acceptance:** (1) every handle writes the same document field as its control and the two stay
+  in sync; (2) inserting and deleting vertices keeps the rounding arrays valid; (3) snapping can be
+  toggled and bypassed with Alt; (4) the handles work with a mouse and with touch. Proof: vitest
+  for the handle-to-field mapping, a recorded session with a mouse and with the mobile emulation.
+- **Ships safely because:** additive on the S4 canvas.
+- **Cleanup owed:** none.
+
+### S4c — `feature/s4c-editor-conveniences`
+- **In scope:** the master rounding control with per-corner overrides, the link toggle, "copy to
+  all corners", rounding presets, "Reset" and "Compare" against the catalogue original, the
+  variations strip, undo and redo with the past, present and future stack, the shortcuts panel.
+- **Out of scope:** in-context prototyping (later idea).
+- **Acceptance:** (1) undo and redo restore exact documents and the URL follows; (2) a variation
+  stays within every field's range and builds without error; (3) "Reset" reproduces the catalogue
+  shape's fixture; (4) the master control and overrides never produce an invalid rounding array.
+  Proof: vitest for the history reducer, the variation generator and the rounding merge; a
+  recorded session.
+- **Ships safely because:** additive.
 - **Cleanup owed:** none.
 
 ### S5 — `feature/s5-exporters`
@@ -176,3 +206,6 @@ named re-cut in their details; the diff is sized before the PR opens.
 ## Decision log
 - 2026-09-28: map created from the kickoff's S0..S9 list; all slices naturally safe, no toggles.
   Budgets above 600 carry a named re-cut instead of pre-splitting, to keep the owner's numbering.
+- 2026-09-28: the owner asked for an interactive editor that is convenient to customise; S4 split
+  into S4 core, S4b direct manipulation and S4c conveniences. In-context prototyping (the shape on
+  an avatar, a button, a FAB, a morphing loader) recorded as a later idea, not v1.

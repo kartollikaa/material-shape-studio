@@ -19,6 +19,8 @@ A static web app for designers and developers working with Material 3 Expressive
    PNG and CSS for those without; share it as a URL that carries the whole document.
 
 Out of scope: raster tracing, component or theme building, accounts, telemetry, any server.
+Recorded as a later idea, not v1: in-context prototyping, the shape applied to an avatar, a button,
+a FAB and a loading indicator that morphs to a circle.
 The project is independent of Google; "Material Design" is Google's trademark and the site says so.
 
 ## 2. Architecture
@@ -167,11 +169,27 @@ One page, four views selected by `view=` in the URL, with a persistent preview a
   catalogue thumbnails and the morph frame.
 - **Catalogue**: a grid of the 35 shapes; click opens one in the editor as its own document; a
   second click (or a "morph to" action) sets it as the morph target.
-- **Editor**: a kind selector; for builder kinds, sliders bound to the document's fields with the
-  library's ranges; for `polygon`, a canvas where slice vertices are dragged, a per-vertex radius and
-  smoothing, repeat count and mirror; a transforms list that can be reordered. Every change writes
-  the document, which rebuilds the preview and the URL. Slider values are rounded to three decimals
-  on write, as the catalogue's data is.
+- **Editor**: a kind selector and, for every kind, two views of the same document fields: controls
+  in a side panel and handles on the canvas. Every change writes the document, which rebuilds the
+  preview and the URL; values are rounded to three decimals on write, as the catalogue's data is.
+  - *Controls*: every numeric field has a slider with the library's range and a numeric input, and
+    dragging the input's label scrubs the value. Rounding has a master control for all corners, a
+    per-corner override list, a link toggle, "copy to all corners" and presets (sharp, soft,
+    squircle). Repeat count and mirror for `polygon`; a transforms list that can be reordered.
+  - *Canvas*: slice vertices drag, and the repeated and mirrored copies are drawn ghosted so the
+    slice is obvious. Each corner has a radius handle on its bisector and a smoothing handle;
+    hovering shows the values. Clicking an edge midpoint inserts a vertex, Delete removes the
+    selected one, arrows nudge and Shift makes steps ten times larger. Builder kinds expose handles
+    for their fields: a star's outer and inner radius points, a pill's width and height, a
+    rectangle's corner radius. A rotation ring writes a `rotate` transform. Grid and axis snapping
+    can be toggled and Alt bypasses them.
+  - *Starting points*: any catalogue shape opens with Material's own parameters; "Reset" restores
+    them and "Compare" overlays the original outline on the preview.
+  - *Variations*: a strip of six documents that perturb the current numeric fields within their
+    ranges, regenerated on demand; clicking one adopts it.
+  - *History*: undo and redo over the document, with the URL following the current state, and a
+    shortcuts panel listing every key.
+  - A validator error is shown next to the control that caused it, never as a blank preview.
 - **Import**: a text box for an SVG `d` attribute; the detected features are listed and drawn with a
   colour per type; a feature's type can be changed; the result is a `features` document whose
   serialised string is shown and copyable.
@@ -180,9 +198,10 @@ One page, four views selected by `view=` in the URL, with a persistent preview a
 - **Export panel**: a target selector, the generated code with a copy button, and per-target
   options (size for SVG and CSS). Present in every view.
 
-State is one `ShapeDocument` (plus a morph target) in a React reducer; the URL codec subscribes to it
-with a short debounce. No global store library. Keyboard: arrows nudge a selected vertex; every control
-is a labelled native input so it works without a mouse.
+State is one `ShapeDocument` (plus a morph target) in a React reducer with a past, present and
+future stack for undo and redo; the URL codec subscribes to the present with a short debounce. No
+global store library. Every control is a labelled native input, so the editor works without a mouse;
+the canvas handles are a second way in, never the only one.
 
 ## 7. Exporters
 
