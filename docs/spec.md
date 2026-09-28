@@ -261,7 +261,7 @@ code's cubics with the document's fixture without any rounding step.
 
 `./gradlew build` runs the engine's tests and packages it; `npm test` runs vitest in each workspace; `npm run build`
 produces `web/dist`. `ci.yml` runs all three on every pull request from a clean checkout; `deploy.yml`
-builds on every push to `main` and publishes with `actions/deploy-pages`. Vite's `base` is `./`:
+builds on every push to `main` and publishes with `actions/deploy-pages`, packaging the engine with `./gradlew :engine:jsPackage` before building the site. Vite's `base` is `./`:
 the app routes only through the URL hash, so relative asset URLs work under any path, nothing
 depends on the Pages URL, and a custom domain is a Pages setting with no code change. The engine's
 production size is measured by `npm run size -w packages/engine` and recorded in the README after

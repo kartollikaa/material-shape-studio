@@ -245,3 +245,7 @@ so S4b and S4c can move after S5 if export is wanted sooner.
   to S6.
 - 2026-09-28: `morphBounds` bounds the outline, not the control points, which can lie outside it;
   `fillSquare` guards flat shapes against the library's `Float.MIN_VALUE` bounds quirk.
+- 2026-09-28: the S1 gate showed the engine's own tests import it through the package's
+  self-reference, so they did not prove a second workspace can consume it. `web` now depends on the
+  engine package from S1, with a test that imports it, and the deploy packages the engine before it
+  builds the site; S3 no longer carries that wiring.

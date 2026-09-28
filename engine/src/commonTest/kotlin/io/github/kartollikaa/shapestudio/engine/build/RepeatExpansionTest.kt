@@ -44,6 +44,19 @@ class RepeatExpansionTest {
     }
 
     @Test
+    fun rotationRepeatsATwoVertexSliceThreeTimes() {
+        val slice = listOf(Corner(Point(1f, 0.5f), Rounding(0.1f)), Corner(Point(0.5f, 1f), Rounding(0.2f)))
+        val out = expandRepeat(slice, count = 3, center = centre, mirror = false)
+        assertEquals(6, out.size)
+        for (copy in 1..2) {
+            slice.forEachIndexed { i, corner ->
+                assertNear(corner.point.rotated(120f * copy), out[copy * 2 + i].point)
+                assertEquals(corner.rounding, out[copy * 2 + i].rounding)
+            }
+        }
+    }
+
+    @Test
     fun mirrorRepeatHasRotationalSymmetry() {
         val points = expandRepeat(pillSlice, count = 2, center = centre, mirror = true).map { it.point }
         assertSameSet(points, points.map { it.rotated(180f) })

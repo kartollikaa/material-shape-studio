@@ -58,6 +58,16 @@ class ValidationTest {
     )
 
     @Test
+    fun sliceTooShortAfterRepeatNamesVertices() = assertRejected(
+        "shape.vertices",
+        """{"v":1,"shape":{"kind":"polygon","vertices":[[1,0.5]],"repeat":{"count":2,"mirror":false}}}""",
+    )
+
+    @Test
+    fun negativeNgonRadiusNamesIt() =
+        assertRejected("shape.radius", """{"v":1,"shape":{"kind":"ngon","vertices":5,"radius":-1}}""")
+
+    @Test
     fun twoVertexSliceWithRepeatIsValid() {
         ShapeEngine.parse(
             """{"v":1,"shape":{"kind":"polygon","vertices":[[0.926,0.97],[-0.021,0.967]],"repeat":{"count":2,"mirror":false}}}""",

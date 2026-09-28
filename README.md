@@ -47,7 +47,8 @@ run until `./gradlew build` has packaged the engine.
 npm run build
 ```
 
-Builds the static site into `web/dist`. Asset URLs are relative, so it can be served from any path.
+Builds the static site into `web/dist`. The web workspace depends on the engine package, so this also
+needs `./gradlew build` first. Asset URLs are relative, so the site can be served from any path.
 
 ```bash
 npm run dev -w web
