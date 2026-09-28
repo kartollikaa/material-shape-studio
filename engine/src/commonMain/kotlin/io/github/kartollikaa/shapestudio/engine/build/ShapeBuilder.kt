@@ -3,6 +3,7 @@ package io.github.kartollikaa.shapestudio.engine.build
 import androidx.graphics.shapes.CornerRounding
 import androidx.graphics.shapes.RoundedPolygon
 import io.github.kartollikaa.shapestudio.engine.document.Point
+import io.github.kartollikaa.shapestudio.engine.document.Repeat
 import io.github.kartollikaa.shapestudio.engine.document.Rounding
 import io.github.kartollikaa.shapestudio.engine.document.Shape
 import io.github.kartollikaa.shapestudio.engine.document.ShapeDocument
@@ -20,12 +21,31 @@ private fun Shape.toRoundedPolygon(): RoundedPolygon = when (this) {
         rounding = rounding.toCornerRounding(),
         perVertexRounding = perVertexRounding?.map { it.toCornerRounding() },
     )
-    is Shape.Polygon -> RoundedPolygon(
-        vertices = vertices.flatten(),
-        rounding = rounding.toCornerRounding(),
-        perVertexRounding = perVertexRounding?.map { it.toCornerRounding() },
-        centerX = center?.x ?: Float.MIN_VALUE,
-        centerY = center?.y ?: Float.MIN_VALUE,
+    is Shape.Polygon -> if (repeat == null) {
+        RoundedPolygon(
+            vertices = vertices.flatten(),
+            rounding = rounding.toCornerRounding(),
+            perVertexRounding = perVertexRounding?.map { it.toCornerRounding() },
+            centerX = center?.x ?: Float.MIN_VALUE,
+            centerY = center?.y ?: Float.MIN_VALUE,
+        )
+    } else {
+        repeated(repeat)
+    }
+}
+
+private val materialSliceCentre = Point(0.5f, 0.5f)
+private val noRounding = Rounding(0f)
+
+private fun Shape.Polygon.repeated(repeat: Repeat): RoundedPolygon {
+    val centre = center ?: materialSliceCentre
+    val slice = vertices.mapIndexed { i, p -> Corner(p, perVertexRounding?.get(i) ?: rounding ?: noRounding) }
+    val corners = expandRepeat(slice, repeat.count, centre, repeat.mirror)
+    return RoundedPolygon(
+        vertices = corners.map { it.point }.flatten(),
+        perVertexRounding = corners.map { it.rounding.toCornerRounding() },
+        centerX = centre.x,
+        centerY = centre.y,
     )
 }
 

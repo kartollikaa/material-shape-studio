@@ -5,3 +5,7 @@ This product depends on androidx.graphics:graphics-shapes
 (https://developer.android.com/jetpack/androidx/releases/graphics),
 developed by The Android Open Source Project and licensed under the
 Apache License, Version 2.0.
+
+This product includes code adapted from androidx.compose.material3
+(MaterialShapes.kt), developed by The Android Open Source Project and
+licensed under the Apache License, Version 2.0.
