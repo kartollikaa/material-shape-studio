@@ -1,9 +1,11 @@
 package io.github.kartollikaa.shapestudio.engine
 
 import androidx.graphics.shapes.Feature
+import androidx.graphics.shapes.Morph
 import io.github.kartollikaa.shapestudio.engine.build.flatCubics
 import io.github.kartollikaa.shapestudio.engine.build.toRoundedPolygon
 import io.github.kartollikaa.shapestudio.engine.document.decodeDocument
+import io.github.kartollikaa.shapestudio.engine.document.reject
 import io.github.kartollikaa.shapestudio.engine.document.ShapeDocument
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
@@ -22,6 +24,18 @@ object ShapeEngine {
             features = polygon.features.map { BuiltFeature(it.typeName(), it.cubics.flatCubics()) },
         )
     }
+
+    fun morph(start: String, end: String): ShapeMorph =
+        ShapeMorph(Morph(parse(start).toRoundedPolygon(), parse(end).toRoundedPolygon()))
+}
+
+class ShapeMorph internal constructor(private val morph: Morph) {
+    fun cubics(progress: Float): FloatArray {
+        if (progress.isNaN() || progress < 0f || progress > 1f) reject("progress", "must be between 0 and 1, got $progress")
+        return morph.asCubics(progress).flatCubics()
+    }
+
+    fun maxBounds(): FloatArray = morph.calculateMaxBounds()
 }
 
 class BuiltShape internal constructor(
