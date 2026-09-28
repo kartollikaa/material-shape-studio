@@ -58,3 +58,13 @@ val jsPackage = tasks.register<Sync>("jsPackage") {
 }
 
 tasks.named("assemble") { dependsOn(jsPackage) }
+
+tasks.named<Test>("jvmTest") {
+    val fixtures = layout.projectDirectory.dir("fixtures")
+    inputs.dir(fixtures).withPropertyName("fixtures")
+    systemProperty("fixtures.dir", fixtures.asFile.absolutePath)
+    if (providers.gradleProperty("updateFixtures").isPresent) {
+        systemProperty("fixtures.update", "true")
+        outputs.upToDateWhen { false }
+    }
+}
