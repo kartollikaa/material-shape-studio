@@ -1,4 +1,4 @@
-# Shape Studio: a web editor for Material Expressive shapes
+# Material Shape Studio: a web editor for Material Expressive shapes
 
 Feasibility research, 2026-09-28. The question: can a browser tool reproduce ("imitate") and
 create any Material Expressive shape, and hand back code for the platforms Material runs on?
@@ -207,8 +207,9 @@ hash, so a link is a shape; a later gallery is a folder of documents added by pu
   `ExperimentalMaterial3ExpressiveApi`, and its promotion to stable was reverted once. The
   library itself (graphics-shapes) is stable at 1.1.0; the catalogue data is what may move, and
   the sync test catches that.
-- **Trademark.** "Material Design" is Google's mark. The product name should not lead with
-  "Material"; "for Material 3 Expressive" in the description is fine.
+- **Trademark.** "Material Design" is Google's mark. The owner chose to keep "Material" in the
+  name so the purpose is obvious; the README and the site state that the project is independent
+  and not affiliated with Google, and use no Google logos.
 - **Maintainer bandwidth.** A single-owner open-source tool needs a small surface: v1 below is
   deliberately narrow.
 
@@ -237,8 +238,8 @@ code for a build step; raster tracing.
 
 ## 12. Decisions for the owner
 
-- **Name and repository.** Working title "Shape Studio"; the repository name and the final name
-  are yours. Avoid leading with "Material".
+- **Name and repository.** "Material Shape Studio", repository `material-shape-studio` (owner's
+  choice, 2026-09-28).
 - **UI framework.** React or Svelte, both fine; React has the larger contributor pool.
 - **Where the code lives.** A new public repository under `kartollikaa`, Apache 2.0.
 - **First target order.** Kotlin, SVG and CSS in v1 as above, or Dart earlier if Flutter users are

@@ -1,4 +1,4 @@
-# Kickoff prompt: Shape Studio
+# Kickoff prompt: Material Shape Studio
 
 Paste everything below the line into a Claude Code session opened in this repository. The
 feasibility research it relies on is [feasibility.md](./feasibility.md).
@@ -9,7 +9,7 @@ Read this whole prompt, then `docs/research/feasibility.md`, before doing anythi
 
 ## What we are building
 
-**Shape Studio** (working title): a static web app that lets anyone browse, create, imitate and
+**Material Shape Studio**: a static web app that lets anyone browse, create, imitate and
 export the shapes of Material 3 Expressive, the rounded-polygon shapes behind Android's
 `androidx.graphics.shapes` library (cookies, clovers, bursts, the 35-shape `MaterialShapes`
 catalogue). The engine is the real Google library compiled to JavaScript, so what the browser
@@ -79,14 +79,15 @@ depend on the Pages URL. Licence Apache 2.0. Public repository. English througho
    is compiled into a generated JVM test source set and rendered, and must match the fixture.
    Every parity test is validated once by breaking a vendored constant on purpose.
 6. **Not in scope:** raster tracing, a component or theme builder, accounts, telemetry, any
-   server. The product name must not lead with "Material" (Google's mark); "for Material 3
-   Expressive" in the description is fine.
+   server. The name is "Material Shape Studio" (owner's choice). "Material Design" is Google's
+   mark, so the README and the site say the project is independent and not affiliated with
+   Google, and never use Google's logos.
 
 ## How the owner works
 
 - Terse directives, results not questions. Decide everything inside an approved plan yourself;
-  ask only for owner-level calls: the name, the UI framework (React or Svelte; recommend React
-  and proceed unless told otherwise), merges, anything public-facing such as publishing to npm.
+  ask only for owner-level calls: the UI framework (React or Svelte; recommend React and
+  proceed unless told otherwise), merges, anything public-facing such as publishing to npm.
 - One pull request per slice, review-sized, landed with a merge commit. Branches
   `feature/ | fix/ | tech/`. Never force-push a reviewed branch.
 - Tests first. Every slice gets numbered acceptance criteria frozen before code (the
@@ -112,7 +113,7 @@ depend on the Pages URL. Licence Apache 2.0. Public repository. English througho
    S1 must record the production bundle size of the engine in the README; if it exceeds what a
    tool page can carry, say so and propose the remedy before S2.
 5. Stop and report after S1 with: the deployed URL, the bundle size, the parity test result,
-   and the two decisions you need from the owner.
+   and any decision you need from the owner.
 
 Definition of done for every slice: `./gradlew check` and `npm test` green from a clean
 checkout, the Pages deploy green, acceptance criteria all PASS with fresh evidence, docs updated,
