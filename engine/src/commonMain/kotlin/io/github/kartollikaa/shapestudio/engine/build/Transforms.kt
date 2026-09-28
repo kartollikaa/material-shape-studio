@@ -18,6 +18,9 @@ internal fun Transform.applyTo(polygon: RoundedPolygon, index: Int): RoundedPoly
     is Transform.StartAngle -> polygon.startingAt(degrees)
 }
 
+// The library's calculateBounds starts its maxima at Float.MIN_VALUE, so a flat shape reports a tiny positive extent.
+private const val MIN_EXTENT = 1e-4f
+
 // Compose's Matrix.rotateZ: angle to radians in double, sine and cosine rounded to float.
 private fun RoundedPolygon.rotated(degrees: Float): RoundedPolygon {
     val r = degrees * (PI / 180.0)
@@ -30,7 +33,7 @@ private fun RoundedPolygon.filledToSquare(index: Int): RoundedPolygon {
     val (left, top, right, bottom) = calculateBounds(approximate = false)
     val width = right - left
     val height = bottom - top
-    if (width <= 0f || height <= 0f) reject("transforms[$index]", "fillSquare needs a shape with a width and a height")
+    if (width < MIN_EXTENT || height < MIN_EXTENT) reject("transforms[$index]", "fillSquare needs a shape with a width and a height")
     return transformed { x, y -> FloatFloatPair((x - left) / width, (y - top) / height) }
 }
 

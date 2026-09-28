@@ -64,6 +64,83 @@ class ValidationTest {
         )
     }
 
+    @Test
+    fun startAngleNotLastNamesIt() = assertRejected(
+        "transforms[0]",
+        """{"v":1,"shape":{"kind":"ngon","vertices":5},"transforms":[{"type":"startAngle","degrees":90},{"type":"normalize"}]}""",
+    )
+
+    @Test
+    fun fractionalStartAngleNamesTheDegrees() = assertRejected(
+        "transforms[0].degrees",
+        """{"v":1,"shape":{"kind":"ngon","vertices":5},"transforms":[{"type":"startAngle","degrees":90.5}]}""",
+    )
+
+    @Test
+    fun starInnerRadiusNotBelowRadiusNamesIt() = assertRejected(
+        "shape.innerRadius",
+        """{"v":1,"shape":{"kind":"star","verticesPerRadius":5,"radius":1,"innerRadius":1}}""",
+    )
+
+    @Test
+    fun starWithOneVertexPerRadiusNamesIt() = assertRejected(
+        "shape.verticesPerRadius",
+        """{"v":1,"shape":{"kind":"star","verticesPerRadius":1}}""",
+    )
+
+    @Test
+    fun nonPositivePillWidthNamesIt() = assertRejected("shape.width", """{"v":1,"shape":{"kind":"pill","width":0}}""")
+
+    @Test
+    fun innerRadiusRatioOutsideTheRangeNamesIt() {
+        assertRejected("shape.innerRadiusRatio", """{"v":1,"shape":{"kind":"pillStar","innerRadiusRatio":1.2}}""")
+        assertRejected("shape.innerRadiusRatio", """{"v":1,"shape":{"kind":"pillStar","innerRadiusRatio":0}}""")
+    }
+
+    @Test
+    fun rectanglePerVertexRoundingNeedsFourEntries() = assertRejected(
+        "shape.perVertexRounding",
+        """{"v":1,"shape":{"kind":"rectangle","perVertexRounding":[{"radius":0.1},{"radius":0.1},{"radius":0.1}]}}""",
+    )
+
+    @Test
+    fun starPerVertexRoundingNeedsTwoEntriesPerPoint() = assertRejected(
+        "shape.perVertexRounding",
+        """{"v":1,"shape":{"kind":"star","verticesPerRadius":3,"perVertexRounding":[{"radius":0.1},{"radius":0.1},{"radius":0.1}]}}""",
+    )
+
+    @Test
+    fun pillStarPerVertexRoundingNeedsTwoEntriesPerPoint() = assertRejected(
+        "shape.perVertexRounding",
+        """{"v":1,"shape":{"kind":"pillStar","verticesPerRadius":4,"perVertexRounding":[{"radius":0.1},{"radius":0.1},{"radius":0.1}]}}""",
+    )
+
+    @Test
+    fun unparsableFeaturesNameTheString() =
+        assertRejected("shape.serialized", """{"v":1,"shape":{"kind":"features","serialized":"V1zzz"}}""")
+
+    @Test
+    fun circleWithTwoVerticesNamesThem() =
+        assertRejected("shape.vertices", """{"v":1,"shape":{"kind":"circle","vertices":2}}""")
+
+    @Test
+    fun zeroScaleNamesTheFactor() = assertRejected(
+        "transforms[0].x",
+        """{"v":1,"shape":{"kind":"ngon","vertices":5},"transforms":[{"type":"scale","x":0,"y":1}]}""",
+    )
+
+    @Test
+    fun fillSquareOnAFlatShapeNamesTheTransform() = assertBuildRejected(
+        "transforms[0]",
+        """{"v":1,"shape":{"kind":"polygon","vertices":[[0,0],[1,0],[2,0]]},"transforms":[{"type":"fillSquare"}]}""",
+    )
+
+    private fun assertBuildRejected(field: String, json: String) {
+        val error = assertFailsWith<DocumentException> { ShapeEngine.build(json) }
+        assertEquals(field, error.field)
+        assertTrue(error.message.orEmpty().startsWith("$field: "), "message was: ${error.message}")
+    }
+
     private fun assertRejected(field: String, json: String) {
         val error = assertFailsWith<DocumentException> { ShapeEngine.parse(json) }
         assertEquals(field, error.field)

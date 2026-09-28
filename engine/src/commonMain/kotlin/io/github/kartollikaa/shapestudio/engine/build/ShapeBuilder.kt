@@ -13,6 +13,7 @@ import io.github.kartollikaa.shapestudio.engine.document.Repeat
 import io.github.kartollikaa.shapestudio.engine.document.Rounding
 import io.github.kartollikaa.shapestudio.engine.document.Shape
 import io.github.kartollikaa.shapestudio.engine.document.ShapeDocument
+import io.github.kartollikaa.shapestudio.engine.document.reject
 
 internal fun ShapeDocument.toRoundedPolygon(): RoundedPolygon =
     transforms.foldIndexed(shape.toRoundedPolygon()) { i, polygon, transform -> transform.applyTo(polygon, i) }
@@ -81,11 +82,16 @@ private fun Shape.toRoundedPolygon(): RoundedPolygon = when (this) {
         centerX = center?.x ?: 0f,
         centerY = center?.y ?: 0f,
     )
-    is Shape.Features -> RoundedPolygon(
-        features = FeatureSerializer.parse(serialized),
-        centerX = center?.x ?: Float.NaN,
-        centerY = center?.y ?: Float.NaN,
-    )
+    is Shape.Features -> fromFeatures()
+}
+
+private fun Shape.Features.fromFeatures(): RoundedPolygon {
+    val features = FeatureSerializer.parse(serialized)
+    return try {
+        RoundedPolygon(features, centerX = center?.x ?: Float.NaN, centerY = center?.y ?: Float.NaN)
+    } catch (e: IllegalArgumentException) {
+        reject("shape.serialized", "the features do not form a polygon: ${e.message}")
+    }
 }
 
 private val materialSliceCentre = Point(0.5f, 0.5f)
