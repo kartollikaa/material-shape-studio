@@ -31,12 +31,13 @@ gets cubic Béziers out, which it renders as SVG.
 
 ```
 engine/                 Gradle, Kotlin Multiplatform: jvm() + js()
-  src/commonMain        document model + validation, builders, catalogue data, façade (@JsExport)
+  src/commonMain        document model + validation, builders, catalogue data, ShapeEngine
+  src/jsMain            the @JsExport façade
   src/commonTest        document round trips, validation
   src/jvmTest           fixture generation, catalogue sync test, Kotlin exporter round trip
   fixtures/             committed golden cubics, one JSON per document
 packages/engine/        npm package @material-shape-studio/engine; dist/ is copied from the
-                        Kotlin/JS build (ES module + .d.ts), never committed
+                        Kotlin/JS build (ES module + .d.mts), never committed
 web/                    Vite + React + TypeScript; workspace member depending on the package above
   src/document          types, defaults, URL codec
   src/engine            typed wrapper over the façade
@@ -85,7 +86,7 @@ type Transform =
   | { type: "scale"; x: number; y: number }     // about the origin
   | { type: "translate"; x: number; y: number }
   | { type: "fillSquare" }                      // stretch so the bounds become exactly (0,0)-(1,1)
-  | { type: "startAngle"; degrees: number }     // as Compose's toShape(startAngle); last only
+  | { type: "startAngle"; degrees: integer }    // as Compose's toShape(startAngle); last only
 ```
 
 Rules:
@@ -102,8 +103,10 @@ Rules:
 - For `features` without `center`, the engine uses the library default: the average of the
   features' anchor points.
 - `startAngle` rotates the whole shape about the origin so that its first point lies at `degrees`
-  from the polygon's centre, then the shape is recentred by its bounds, which is what Compose's
-  `toShape(startAngle)` does when it draws. It changes the geometry, so it is a real transform.
+  from the polygon's centre, as Compose's `toShape(startAngle)` does; `0` leaves the shape alone,
+  as there. It changes the geometry, so it is a real transform. Compose then recentres every
+  `toShape()` outline by its bounds when it draws; the engine does not recentre, and the preview
+  does that step (§6).
 - Transforms apply in order after the shape is built. New documents created in the editor start with
   `[normalize]`; the export panel warns when the final bounds leave the unit square, because Compose's
   `toShape()` scales the unit square to the component size.
@@ -153,8 +156,9 @@ type Feature = { type: "convex" | "concave" | "edge" | "ignorable"; cubics: numb
 
 Only edge, convex and concave features serialise, as in the library. The import screen therefore
 requires every `ignorable` feature to be retyped before the document can be exported. The façade is
-the whole public surface of the engine; the JVM side exposes the same functions as ordinary Kotlin for
-tests and a possible later CLI.
+the whole public surface of the engine for JavaScript. On the JVM the same engine is ordinary Kotlin,
+`ShapeEngine.parse` and `ShapeEngine.build` returning a `BuiltShape`, used by the tests and a possible
+later CLI.
 
 ## 5. Catalogue
 
@@ -236,7 +240,10 @@ code's cubics with the document's fixture without any rounding step.
   `engine/fixtures/expected/` their JVM-built output, both committed. A JVM test requires the output
   to match exactly, so drift fails instead of being rewritten; only `./gradlew :engine:jvmTest
   -PupdateFixtures` regenerates. A vitest suite runs the JS engine over the same documents and
-  compares cubics within 1e-5.
+  compares cubics within 1e-5, with the same count. That guarantee holds away from the library's
+  1e-4 epsilon: Kotlin/JS keeps the library's `Float` constants as doubles while arrays store
+  float32, so a feature whose length or cut sits within float rounding of 1e-4 can be dropped on one
+  target and kept on the other. Fixtures therefore stay clear of such degenerate edges.
 - **Catalogue sync**: the JVM test of section 5.
 - **Kotlin round trip**: the Kotlin exporter's output for every fixture document is written into a
   generated JVM test source set, compiled and rendered in CI; cubics must equal the fixture.
