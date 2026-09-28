@@ -1,0 +1,7 @@
+Material Shape Studio
+Copyright 2026 The Material Shape Studio Authors
+
+This product depends on androidx.graphics:graphics-shapes
+(https://developer.android.com/jetpack/androidx/releases/graphics),
+developed by The Android Open Source Project and licensed under the
+Apache License, Version 2.0.
