@@ -13,10 +13,9 @@ import io.github.kartollikaa.shapestudio.engine.document.Repeat
 import io.github.kartollikaa.shapestudio.engine.document.Rounding
 import io.github.kartollikaa.shapestudio.engine.document.Shape
 import io.github.kartollikaa.shapestudio.engine.document.ShapeDocument
-import io.github.kartollikaa.shapestudio.engine.document.Transform
 
 internal fun ShapeDocument.toRoundedPolygon(): RoundedPolygon =
-    transforms.fold(shape.toRoundedPolygon()) { polygon, transform -> transform.applyTo(polygon) }
+    transforms.foldIndexed(shape.toRoundedPolygon()) { i, polygon, transform -> transform.applyTo(polygon, i) }
 
 private fun Shape.toRoundedPolygon(): RoundedPolygon = when (this) {
     is Shape.Ngon -> RoundedPolygon(
@@ -102,10 +101,6 @@ private fun Shape.Polygon.repeated(repeat: Repeat): RoundedPolygon {
         centerX = centre.x,
         centerY = centre.y,
     )
-}
-
-private fun Transform.applyTo(polygon: RoundedPolygon): RoundedPolygon = when (this) {
-    Transform.Normalize -> polygon.normalized()
 }
 
 internal fun Rounding?.toCornerRounding(): CornerRounding =

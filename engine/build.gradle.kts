@@ -44,6 +44,7 @@ kotlin {
             kotlin.srcDir(generateEngineVersion)
             dependencies {
                 implementation(libs.graphics.shapes)
+                implementation(libs.androidx.collection)
                 implementation(libs.kotlinx.serialization.json)
             }
         }

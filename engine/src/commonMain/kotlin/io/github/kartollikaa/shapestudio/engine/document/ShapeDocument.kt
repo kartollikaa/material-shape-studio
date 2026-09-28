@@ -115,6 +115,26 @@ sealed interface Transform {
     @Serializable
     @SerialName("normalize")
     data object Normalize : Transform
+
+    @Serializable
+    @SerialName("rotate")
+    data class Rotate(val degrees: Float) : Transform
+
+    @Serializable
+    @SerialName("scale")
+    data class Scale(val x: Float, val y: Float) : Transform
+
+    @Serializable
+    @SerialName("translate")
+    data class Translate(val x: Float, val y: Float) : Transform
+
+    @Serializable
+    @SerialName("fillSquare")
+    data object FillSquare : Transform
+
+    @Serializable
+    @SerialName("startAngle")
+    data class StartAngle(val degrees: Int) : Transform
 }
 
 internal object PointSerializer : KSerializer<Point> {
