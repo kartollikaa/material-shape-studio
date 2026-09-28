@@ -16,7 +16,7 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 
 | # | PR title | Purpose (one sentence) | Strategy | Size budget | Depends on | Status |
 |---|----------|------------------------|----------|-------------|------------|--------|
-| S0 | `tech/s0-scaffold` | A buildable, deployable skeleton: Gradle KMP engine, npm workspace, licence, CI and Pages deploy of a placeholder page | safe | ~300 | — | planned |
+| S0 | `tech/s0-scaffold` | A buildable, deployable skeleton: Gradle KMP engine, npm workspace, licence, CI and Pages deploy of a placeholder page | safe | ~300 | — | in-progress |
 | S1 | `feature/s1-engine-facade` | The engine builds any document to cubics in JVM and JS, proven equal by golden fixtures, with its bundle size known | safe | ~800 | S0 | planned |
 | S2 | `feature/s2-catalogue` | The 35 catalogue shapes as vendored documents, proven equal to Compose's `MaterialShapes` | safe | ~500 | S1 | planned |
 | S3 | `feature/s3-ui-shell` | A site that shows the catalogue with a live preview and carries the document in the URL | safe | ~650 | S2 | planned |
@@ -43,8 +43,8 @@ so S4b and S4c can move after S5 if export is wanted sooner.
   the version catalogue, the Gradle wrapper, `graphics-shapes` as a dependency with one
   `commonTest` that constructs a `RoundedPolygon`; root `package.json` with workspaces, empty
   `packages/engine`, `web` from the Vite React TypeScript template with one vitest; `LICENSE`
-  (Apache 2.0), `NOTICE`, `.gitignore`, `.editorconfig`; `ci.yml` and `deploy.yml`; Vite `base`
-  from `SITE_BASE`; README with build instructions and the trademark notice.
+  (Apache 2.0), `NOTICE`, `.gitignore`, `.editorconfig`; `ci.yml` and `deploy.yml`; a relative Vite
+  `base`; README with build instructions and the trademark notice.
 - **Out of scope:** any façade code, any real UI.
 - **Acceptance:** (1) `./gradlew check` and `npm test` pass from a clean clone; (2) `ci.yml` is
   green on the PR; (3) the placeholder page is live on Pages after merge; (4) the licence and
@@ -194,12 +194,12 @@ so S4b and S4c can move after S5 if export is wanted sooner.
 
 ### S9 — `feature/s9-gallery-site`
 - **In scope:** `gallery/` of contributed documents added by pull request with a validation test,
-  a gallery view, user docs in `docs/`, a contributing guide, the custom-domain path (a `CNAME`
-  produced from a repository variable), README polish.
+  a gallery view, user docs in `docs/`, a contributing guide, custom-domain readiness (a domain
+  set in the Pages settings, no code change), README polish.
 - **Out of scope:** accounts, uploads, a backend.
 - **Acceptance:** (1) a document in `gallery/` appears on the site and an invalid one fails CI;
-  (2) the docs describe every view and every target; (3) changing `SITE_BASE` alone moves the site
-  to a custom domain. Proof: CI runs for a valid and an invalid gallery entry, a docs review.
+  (2) the docs describe every view and every target; (3) the built site loads unchanged from a
+  domain root and from a sub-path. Proof: CI runs for a valid and an invalid gallery entry, a docs review.
 - **Ships safely because:** additive.
 - **Cleanup owed:** none.
 
@@ -209,3 +209,6 @@ so S4b and S4c can move after S5 if export is wanted sooner.
 - 2026-09-28: the owner asked for an interactive editor that is convenient to customise; S4 split
   into S4 core, S4b direct manipulation and S4c conveniences. In-context prototyping (the shape on
   an avatar, a button, a FAB, a morphing loader) recorded as a later idea, not v1.
+- 2026-09-28: S0 replaces the `SITE_BASE` repository variable with a relative Vite `base`. The app
+  routes only through the hash, so no variable is needed and a custom domain is a Pages setting.
+  S0 stacks on the spec PR, so CI runs on pull requests to any base branch.
