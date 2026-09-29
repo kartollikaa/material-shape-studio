@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "pretest": "node ../packages/engine/scripts/require-dist.mjs",
     "test": "vitest run",
-    "catalogue": "node scripts/generate-catalogue.mjs"
+    "catalogue": "node scripts/generate-catalogue.mjs",
+    "round-trip": "UPDATE_ROUND_TRIP=1 vitest run src/export/round-trip.test.ts"
   },
   "dependencies": {
     "@material-shape-studio/engine": "^0.1.0",

@@ -1,4 +1,4 @@
-import { roundTo } from "./kotlin";
+import { roundTo } from "./numbers";
 
 export function cssRule(cubics: ArrayLike<number>): string {
   const at = (x: number, y: number) => `${roundTo(x * 100, 2)}% ${roundTo(y * 100, 2)}%`;

@@ -1,12 +1,16 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const COMMIT = "080d2b3e5326ba80392d93442c4a51a02dc22650";
 const PATH = "compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/MaterialShapes.kt";
 const OUTPUT = new URL("../src/catalogue/catalogue.json", import.meta.url);
 
-const response = await fetch(`https://raw.githubusercontent.com/androidx/androidx/${COMMIT}/${PATH}`);
-if (!response.ok) throw new Error(`fetching ${PATH} failed: ${response.status}`);
-const source = await response.text();
+async function upstream() {
+  const response = await fetch(`https://raw.githubusercontent.com/androidx/androidx/${COMMIT}/${PATH}`);
+  if (!response.ok) throw new Error(`fetching ${PATH} failed: ${response.status}`);
+  return response.text();
+}
+const localFile = process.argv[2];
+const source = localFile ? readFileSync(localFile, "utf8") : await upstream();
 
 const num = (text) => Number(text.replace(/f$/, ""));
 const constants = Object.fromEntries(
@@ -26,10 +30,41 @@ function rounding(text) {
 }
 const roundingList = (text) => text.split(",").map((x) => x.trim()).filter(Boolean).map(rounding);
 
+function callArguments(body, call) {
+  const start = body.indexOf(`${call}(`);
+  if (start < 0) return null;
+  let depth = 0;
+  for (let i = start + call.length; i < body.length; i++) {
+    if (body[i] === "(") depth++;
+    if (body[i] === ")" && --depth === 0) return body.slice(start + call.length + 1, i);
+  }
+  throw new Error(`unbalanced ${call}(`);
+}
+
+function namedArguments(name, args, allowed) {
+  const found = {};
+  let depth = 0;
+  let current = "";
+  for (const ch of `${args},`) {
+    if (ch === "(" || ch === "{") depth++;
+    if (ch === ")" || ch === "}") depth--;
+    if (ch === "," && depth === 0) {
+      const m = /^\s*(\w+)\s*=\s*([\s\S]+?)\s*$/.exec(current);
+      if (current.trim() && !m) throw new Error(`${name}: unnamed argument ${current.trim()}`);
+      if (m && !allowed.includes(m[1])) throw new Error(`${name}: unsupported argument ${m[1]}`);
+      if (m) found[m[1]] = m[2];
+      current = "";
+    } else current += ch;
+  }
+  return found;
+}
+
 function shapeOf(name, params, body) {
   if (body.includes("customPolygon(")) {
     if (body.includes("center =")) throw new Error(`${name}: custom centres are not supported`);
     const points = [...body.matchAll(/PointNRound\(Offset\(([-\d.]+)f, ([-\d.]+)f\)(?:, (CornerRounding\([^)]*\)|cornerRound\w+))?\)/g)];
+    const declared = body.split("PointNRound(").length - 1;
+    if (points.length !== declared) throw new Error(`${name}: parsed ${points.length} of ${declared} points`);
     const reps = /\),\s*(?:reps = )?(\d+)\s*,/.exec(body.slice(body.lastIndexOf("PointNRound")));
     if (!reps) throw new Error(`${name}: no repeat count`);
     return {
@@ -39,31 +74,37 @@ function shapeOf(name, params, body) {
       repeat: { count: Number(reps[1]), mirror: body.includes("mirroring = true") },
     };
   }
-  if (body.includes("RoundedPolygon.star(")) {
-    const args = /RoundedPolygon\.star\(([\s\S]*?)\)(?:\s*\.transformed|\s*$)/.exec(body)[1];
-    const shape = { kind: "star", verticesPerRadius: Number(/numVerticesPerRadius = (\d+)/.exec(args)[1]) };
-    const inner = /innerRadius = ([-\d.]+)f/.exec(args);
-    if (inner) shape.innerRadius = num(inner[1]);
-    const r = /rounding = (\w+|CornerRounding\([^)]*\))/.exec(args);
-    if (r) shape.rounding = rounding(r[1]);
+  const star = callArguments(body, "RoundedPolygon.star");
+  if (star !== null) {
+    const a = namedArguments(name, star, ["numVerticesPerRadius", "innerRadius", "rounding"]);
+    const shape = { kind: "star", verticesPerRadius: Number(a.numVerticesPerRadius) };
+    if (a.innerRadius) shape.innerRadius = num(a.innerRadius);
+    if (a.rounding) shape.rounding = rounding(a.rounding);
     return shape;
   }
-  const perVertex = /perVertexRounding = listOf\(([^)]*)\)/.exec(body);
-  const uniform = /\brounding = (\w+)/.exec(body);
-  const withRounding = (shape) => {
-    if (perVertex) shape.perVertexRounding = roundingList(perVertex[1]);
-    else if (uniform) shape.rounding = rounding(uniform[1]);
+  const withRounding = (shape, a) => {
+    if (a.perVertexRounding) shape.perVertexRounding = roundingList(/^listOf\(([\s\S]*)\)$/.exec(a.perVertexRounding)[1]);
+    else if (a.rounding) shape.rounding = rounding(a.rounding);
     return shape;
   };
-  if (body.includes("RoundedPolygon.rectangle(")) {
-    return withRounding({ kind: "rectangle", width: num(/width = ([-\d.]+)f/.exec(body)[1]), height: num(/height = ([-\d.]+)f/.exec(body)[1]) });
+  const rectangle = callArguments(body, "RoundedPolygon.rectangle");
+  if (rectangle !== null) {
+    const a = namedArguments(name, rectangle, ["width", "height", "rounding", "perVertexRounding"]);
+    return withRounding({ kind: "rectangle", width: num(a.width), height: num(a.height) }, a);
   }
-  if (body.includes("RoundedPolygon.circle(")) {
+  const circle = callArguments(body, "RoundedPolygon.circle");
+  if (circle !== null) {
+    const a = namedArguments(name, circle, ["numVertices"]);
+    if (!a.numVertices) return { kind: "circle" };
     const fallback = /numVertices: Int = (\d+)/.exec(params);
-    return body.includes("circle(numVertices = numVertices)") && fallback ? { kind: "circle", vertices: Number(fallback[1]) } : { kind: "circle" };
+    const vertices = a.numVertices === "numVertices" ? fallback?.[1] : a.numVertices;
+    if (!/^\d+$/.test(vertices ?? "")) throw new Error(`${name}: unknown circle vertex count ${a.numVertices}`);
+    return { kind: "circle", vertices: Number(vertices) };
   }
-  if (body.includes("RoundedPolygon(")) {
-    return withRounding({ kind: "ngon", vertices: Number(/numVertices = (\d+)/.exec(body)[1]) });
+  const ngon = callArguments(body, "RoundedPolygon");
+  if (ngon !== null) {
+    const a = namedArguments(name, ngon, ["numVertices", "rounding", "perVertexRounding"]);
+    return withRounding({ kind: "ngon", vertices: Number(a.numVertices) }, a);
   }
   throw new Error(`${name}: unrecognised recipe`);
 }
