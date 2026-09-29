@@ -221,23 +221,24 @@ the canvas handles are a second way in, never the only one.
 
 ## 7. Exporters
 
-An exporter is a pure function `(doc: ShapeDocument, built: BuildResult, options) => { code: string;
-language: string; filename: string }` in `web/src/exporters/<target>.ts`, snapshot-tested over the
-fixture documents. Targets, in delivery order:
+Exporters are pure functions in `web/src/export/`, one module per target, taking a document or its
+normalized cubics and returning text. The studio offers four targets today:
 
 | Target | Emits |
 |---|---|
-| Kotlin, Compose | `MaterialShapes.Name` on catalogue equality, else the constructor (`RoundedPolygon(...)`, `RoundedPolygon.star(...)`, `RoundedPolygon(FeatureSerializer.parse("V1..."))`), then `.normalized()` and `.transformed { x, y -> ... }` for the transforms, then `.toShape(startAngle = n)` usage; a `Morph(a, b)` snippet on the morph view; `fillSquare` emits a small extension function |
-| SVG | `<svg viewBox>` with one `<path d>` at the chosen size |
-| CSS | `clip-path: path("...")` at a fixed size and `clip-path: shape(...)` for a responsive clip |
-| Java, Views | the same as Kotlin in Java syntax with `MaterialShapes.COOKIE_12_SIDED` constants and `MaterialShapes.createShapeDrawable(shape)` |
-| Dart | the constructor for the chosen package (`androidx_graphics_shapes` or `material_ui`), names read from that package's API when the exporter is written |
-| Swift | `UIBezierPath` and SwiftUI `Path` from the cubics; path only |
-| TypeScript | a `build(doc)` call against this project's own engine package |
-| PNG | not an exporter: the preview rasterises its SVG to a canvas at the chosen size and downloads it |
+| Compose | A paste-ready Kotlin file whose `ShapedBox` clips a box to the shape. An untouched catalogue shape is `MaterialShapes.Name`; anything else is a `private val MyShape` built with the `graphics-shapes` constructor for its kind, then `.transformed { x, y -> TransformResult(...) }` for each rotation or scale and `.normalized()`. A repeated polygon is emitted with its expanded vertices, since no platform exposes Material's slice helper. |
+| SVG | `<svg viewBox="0 0 100 100">` with one `<path>` in the chosen colour |
+| PNG | Not an exporter: the page fills the path on a 1024 × 1024 canvas with a transparent background |
+| CSS | One `clip-path: shape(...)` in percentages, so the clip follows the element's size |
 
-Numbers are emitted exactly as stored in the document, so the Kotlin round trip compares the exported
-code's cubics with the document's fixture without any rounding step.
+`fillSquare` and `startAngle` have no Compose export yet and raise an error; the studio never
+produces them. Planned targets: Java for Views with `MaterialShapes.COOKIE_12_SIDED` constants and
+`createShapeDrawable`, Dart for the chosen Flutter package, Swift `UIBezierPath` and SwiftUI `Path`,
+TypeScript against this project's engine package, and a Compose `Morph` snippet for the press
+animation.
+
+Coordinates in the Compose export are rounded to five decimals, so its geometry equals the engine's
+within 1e-4 rather than exactly; a compiled check proves that bound for every catalogue shape.
 
 ## 8. Fidelity and tests
 
@@ -250,8 +251,9 @@ code's cubics with the document's fixture without any rounding step.
   float32, so a feature whose length or cut sits within float rounding of 1e-4 can be dropped on one
   target and kept on the other. Fixtures therefore stay clear of such degenerate edges.
 - **Catalogue sync**: the JVM test of section 5.
-- **Kotlin round trip**: the Kotlin exporter's output for every fixture document is written into a
-  generated JVM test source set, compiled and rendered in CI; cubics must equal the fixture.
+- **Kotlin round trip**: the Compose export for every catalogue shape and a set of edited ones is
+  compiled against `graphics-shapes` on the JVM and must reproduce the engine's cubics within 1e-4.
+  S3a ran it as a documented command; S5 moves it into CI.
 - **Other exporters**: snapshot tests; Dart gets a `dart test` job once its package is chosen.
 - **UI**: vitest for the codec, reducer and exporters; a Playwright smoke test against the built
   site that opens a catalogue shape, moves a slider and copies the Kotlin output.

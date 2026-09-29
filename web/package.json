@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "pretest": "node ../packages/engine/scripts/require-dist.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "catalogue": "node scripts/generate-catalogue.mjs"
   },
   "dependencies": {
     "@material-shape-studio/engine": "^0.1.0",
