@@ -50,6 +50,20 @@ class TransformsTest {
     }
 
     @Test
+    fun fillSquareReachesTheUnitSquareFromNegativeCoordinates() {
+        listOf(
+            """[{"type":"normalize"},{"type":"rotate","degrees":180},{"type":"fillSquare"}]""",
+            """[{"type":"translate","x":-5,"y":-5},{"type":"fillSquare"}]""",
+        ).forEach { transforms ->
+            val polygon = ShapeEngine.parse("""{"v":1,"shape":$star,"transforms":$transforms}""").toRoundedPolygon()
+            val bounds = polygon.calculateBounds(approximate = false)
+            floatArrayOf(0f, 0f, 1f, 1f).forEachIndexed { i, e ->
+                assertEquals(e, bounds[i], absoluteTolerance = 1e-5f, "bounds[$i] after $transforms")
+            }
+        }
+    }
+
+    @Test
     fun startAnglePutsTheFirstPointAtThatAngleFromTheCentre() {
         listOf(90, -135, 180).forEach { angle ->
             val polygon = ShapeEngine.parse(

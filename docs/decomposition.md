@@ -16,9 +16,9 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 
 | # | PR title | Purpose (one sentence) | Strategy | Size budget | Depends on | Status |
 |---|----------|------------------------|----------|-------------|------------|--------|
-| S0 | `tech/s0-scaffold` | A buildable, deployable skeleton: Gradle KMP engine, npm workspace, licence, CI and Pages deploy of a placeholder page | safe | ~300 | — | in-review |
-| S1 | `feature/s1-engine-pipeline` | The engine builds `ngon` and `polygon` (with repeat) documents plus `normalize` in JVM and JS, proven equal by golden fixtures, packaged with types, its bundle size known | safe | ~960, justified | S0 | in-review |
-| S1b | `feature/s1b-engine-document` | Every remaining shape kind and transform, and morph handles, through the same pipeline | safe | ~920, justified | S1 | in-progress |
+| S0 | `tech/s0-scaffold` | A buildable, deployable skeleton: Gradle KMP engine, npm workspace, licence, CI and Pages deploy of a placeholder page | safe | ~300 | — | merged |
+| S1 | `feature/s1-engine-pipeline` | The engine builds `ngon` and `polygon` (with repeat) documents plus `normalize` in JVM and JS, proven equal by golden fixtures, packaged with types, its bundle size known | safe | ~960, justified | S0 | merged |
+| S1b | `feature/s1b-engine-document` | Every remaining shape kind and transform, and morph handles, through the same pipeline | safe | ~920, justified | S1 | merged |
 | S2 | `feature/s2-catalogue` | The 35 catalogue shapes as vendored documents, proven equal to Compose's `MaterialShapes` | safe | ~500 | S1b | planned |
 | S3 | `feature/s3-ui-shell` | A site that shows the catalogue with a live preview and carries the document in the URL | safe | ~650 | S2 | planned |
 | S4 | `feature/s4-editor-core` | Create and edit any document kind with sliders and numeric inputs, drag slice vertices, edit the transforms list | safe | ~600 | S3 | planned |
@@ -249,3 +249,6 @@ so S4b and S4c can move after S5 if export is wanted sooner.
   self-reference, so they did not prove a second workspace can consume it. `web` now depends on the
   engine package from S1, with a test that imports it, and the deploy packages the engine before it
   builds the site; S3 no longer carries that wiring.
+- 2026-09-28: S0, S1 and S1b merged in order with merge commits on the owner's go. S1b's review
+  fixes landed first: `fillSquare` measures the true extent at negative coordinates, a validation
+  test the merge had disabled runs again, and the malformed-features error paths are tested.

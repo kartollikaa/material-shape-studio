@@ -109,8 +109,9 @@ Rules:
   does that step (§6).
 - `fillSquare` refuses a shape flatter than the library's 1e-4 distance epsilon. The library's
   `calculateBounds` starts its maxima at `Float.MIN_VALUE`, so for a shape lying wholly at negative
-  coordinates `bounds` and `normalize` differ from the true extent; the engine keeps that, as Compose
-  does, and a fixture pins it.
+  coordinates `bounds` and `normalize` differ from the true extent; the engine keeps that for them, as
+  Compose does, and a fixture pins it. `fillSquare` is the engine's own transform, so it measures the
+  true extent and always reaches the unit square.
 - Transforms apply in order after the shape is built. New documents created in the editor start with
   `[normalize]`; the export panel warns when the final bounds leave the unit square, because Compose's
   `toShape()` scales the unit square to the component size.

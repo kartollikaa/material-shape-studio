@@ -145,6 +145,7 @@ class ValidationTest {
         """{"v":1,"shape":{"kind":"polygon","vertices":[[0,0],[1,0],[2,0]]},"transforms":[{"type":"fillSquare"}]}""",
     )
 
+    @Test
     fun unknownKeyWithTheKindLastStillNamesTheShape() =
         assertRejected("shape", """{"v":1,"shape":{"vertex":4,"kind":"ngon"}}""")
 
@@ -170,6 +171,24 @@ class ValidationTest {
     fun unknownKeyInATransformWithTheTypeLastNamesTheTransform() = assertRejected(
         "transforms[0]",
         """{"v":1,"shape":{"kind":"ngon","vertices":4},"transforms":[{"extra":1,"type":"normalize"}]}""",
+    )
+
+    @Test
+    fun featuresThatDoNotJoinNameTheString() = assertBuildRejected(
+        "shape.serialized",
+        """{"v":1,"shape":{"kind":"features","serialized":"V1n0.5,1,0.33333334,0.6666667,0.16666667,0.33333334,0,0x0,0,0,0,0,0,0,0n0.2,0.2,0.3333333,0,0.6666666,0,1,0x1,0,1,0,1,0,1,0n1,0,0.8333334,0.3333333,0.6666666,0.6666666,0.5,1x0.5,1,0.5,1,0.5,1,0.5,1"}}""",
+    )
+
+    @Test
+    fun aSingleFeatureNamesTheString() = assertRejected(
+        "shape.serialized",
+        """{"v":1,"shape":{"kind":"features","serialized":"V1n0,0,0.3,0,0.6,0,1,0"}}""",
+    )
+
+    @Test
+    fun fillSquareOnAFlatShapeAtNegativeCoordinatesNamesTheTransform() = assertBuildRejected(
+        "transforms[0]",
+        """{"v":1,"shape":{"kind":"polygon","vertices":[[0,-1],[1,-1],[2,-1]]},"transforms":[{"type":"fillSquare"}]}""",
     )
 
     private fun assertBuildRejected(field: String, json: String) {
