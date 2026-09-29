@@ -38,11 +38,12 @@ engine/                 Gradle, Kotlin Multiplatform: jvm() + js()
   fixtures/             committed golden cubics, one JSON per document
 packages/engine/        npm package @material-shape-studio/engine; dist/ is copied from the
                         Kotlin/JS build (ES module + .d.mts), never committed
-web/                    Vite + React + TypeScript; workspace member depending on the package above
-  src/document          types, defaults, URL codec
-  src/engine            typed wrapper over the façade
-  src/exporters         one module per target, pure functions document -> text
-  src/ui                screens and components
+web/                    Vite + TypeScript, no UI framework; workspace member depending on the package above
+  scripts/              generate-catalogue.mjs: the 35 MaterialShapes from Compose's source
+  src/document.ts       the shape document types
+  src/catalogue/        the generated catalogue data
+  src/export/           one module per target, pure functions from a document or its cubics to text
+  src/studio/           editor state and controls (editor.ts), dot geometry, and the page (page.ts)
 .github/workflows       ci.yml (every PR), deploy.yml (main -> GitHub Pages)
 ```
 
@@ -177,47 +178,29 @@ Multiplatform desktop artifact, so an upstream change fails the build. Names are
 
 ## 6. User interface
 
-One page, four views selected by `view=` in the URL, with a persistent preview and export panel.
+One page in three steps, framework-free TypeScript over the page's own markup in `web/index.html`.
+Every piece exists because one of the three jobs needs it: pick a shape, adjust it, take it into an
+app. It follows the system's light or dark setting.
 
-- **Preview** (every view): the shape rendered as an SVG path in a square viewport the way Compose's
-  `toShape()` draws it: the unit square scaled to the viewport, then centred by the shape's bounds;
-  controls for size, fill or outline, light or dark; the same component draws the
-  catalogue thumbnails and the morph frame.
-- **Catalogue**: a grid of the 35 shapes; click opens one in the editor as its own document; a
-  second click (or a "morph to" action) sets it as the morph target.
-- **Editor**: a kind selector and, for every kind, two views of the same document fields: controls
-  in a side panel and handles on the canvas. Every change writes the document, which rebuilds the
-  preview and the URL; values are rounded to three decimals on write, as the catalogue's data is.
-  - *Controls*: every numeric field has a slider with the library's range and a numeric input, and
-    dragging the input's label scrubs the value. Rounding has a master control for all corners, a
-    per-corner override list, a link toggle, "copy to all corners" and presets (sharp, soft,
-    squircle). Repeat count and mirror for `polygon`; a transforms list that can be reordered.
-  - *Canvas*: slice vertices drag, and the repeated and mirrored copies are drawn ghosted so the
-    slice is obvious. Each corner has a radius handle on its bisector and a smoothing handle;
-    hovering shows the values. Clicking an edge midpoint inserts a vertex, Delete removes the
-    selected one, arrows nudge and Shift makes steps ten times larger. Builder kinds expose handles
-    for their fields: a star's outer and inner radius points, a pill's width and height, a
-    rectangle's corner radius. A rotation ring writes a `rotate` transform. Grid and axis snapping
-    can be toggled and Alt bypasses them.
-  - *Starting points*: any catalogue shape opens with Material's own parameters; "Reset" restores
-    them and "Compare" overlays the original outline on the preview.
-  - *Variations*: a strip of six documents that perturb the current numeric fields within their
-    ranges, regenerated on demand; clicking one adopts it.
-  - *History*: undo and redo over the document, with the URL following the current state, and a
-    shortcuts panel listing every key.
-  - A validator error is shown next to the control that caused it, never as a blank preview.
-- **Import**: a text box for an SVG `d` attribute; the detected features are listed and drawn with a
-  colour per type; a feature's type can be changed; the result is a `features` document whose
-  serialised string is shown and copyable.
-- **Morph**: the current document and a target document, a scrubber and a play button, the frame
-  drawn from `morphCubics`; the target is chosen from the catalogue or pasted as a share URL.
-- **Export panel**: a target selector, the generated code with a copy button, and per-target
-  options (size for SVG and CSS). Present in every view.
+- **1 · Pick a Material shape**: the 35 catalogue shapes as thumbnails; hovering names one, and
+  picking one replaces the current shape.
+- **Preview**: the shape at full size in the chosen colour. Polygon shapes show their slice's dots;
+  dragging a dot moves that vertex, and the repeated pattern follows. Arrow keys nudge the selected
+  dot, Shift for larger steps. Below it, **In use** shows the shape as a photo, an icon button and an
+  avatar.
+- **2 · Adjust**: only the sliders that change the selected shape, each with a one-line reason:
+  Repeats for patterns that repeat, Points and Depth for stars, Sides for n-gons, Proportion for
+  rectangles, Squash for circles, Roundness, and Rotate where it shows. Roundness scales every
+  corner of Material's recipe together; sharp shapes start at 0%. Then Colour, used in the preview
+  and the exports. **Reset** appears once the shape differs from Material's. **More options**,
+  closed by default, holds Softness, the roundness of the selected dot, and adding or removing a
+  dot; removal never leaves fewer than three corners or changes a one-off shape's repeats.
+- **3 · Export**: tabs for Compose, SVG, PNG and CSS (§7), each with a one-line description, its
+  copy or download buttons, and the code where there is code.
+- **Undo and Redo** in the header, and Ctrl+Z / Ctrl+Shift+Z, step through every edit.
 
-State is one `ShapeDocument` (plus a morph target) in a React reducer with a past, present and
-future stack for undo and redo; the URL codec subscribes to the present with a short debounce. No
-global store library. Every control is a labelled native input, so the editor works without a mouse;
-the canvas handles are a second way in, never the only one.
+A document that cannot be built keeps the last good preview and says why under it. Every control is
+a labelled native input, so the studio works without a mouse; dragging dots is a second way in.
 
 ## 7. Exporters
 

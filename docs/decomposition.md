@@ -22,7 +22,7 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 | S2 | `feature/s2-catalogue` | The 35 catalogue shapes as vendored documents, proven equal to Compose's `MaterialShapes` | safe | ~500 | S1b | planned |
 | S3a | `feature/s3a-exporters-catalogue` | The 35 Material shapes generated from Compose's source, and the Compose, SVG and CSS exporters, all tested | safe | ~600 | S1b | in-review |
 | S3b | `feature/s3b-studio-editor` | The studio's editing model: per-shape controls, dots, undo and redo, tested on every catalogue shape | safe | ~420 | S3a | in-review |
-| S3c | `feature/s3c-studio-page` | The approved prototype as the site: pick, adjust, see it in use, export; React leaves | safe | ~650 | S3b | planned |
+| S3c | `feature/s3c-studio-page` | The approved prototype as the site: pick, adjust, see it in use, export; React leaves | safe | ~650 | S3b | in-review |
 | S4 | `feature/s4-editor-core` | Superseded by S3b: the owner chose the prototype's simpler editor | — | — | — | dropped |
 | S4b | `feature/s4b-direct-manipulation` | Superseded by S3b: dots on the shape cover direct editing; handles, ring and snapping are not wanted | — | — | — | dropped |
 | S4c | `feature/s4c-editor-conveniences` | Superseded by S3b: undo, reset and per-dot roundness ship there; the rest is not wanted | — | — | — | dropped |
