@@ -1,0 +1,39 @@
+:root {
+  --surface: #fdf8fd;
+  --on-surface: #1c1b1f;
+  --muted: #5f5b66;
+  --accent: #6750a4;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #141218;
+    --on-surface: #e6e0e9;
+    --muted: #aca6b4;
+    --accent: #d0bcff;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--on-surface);
+  font: 1rem/1.5 system-ui, sans-serif;
+}
+
+.placeholder {
+  box-sizing: border-box;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 4rem 16px;
+}
+
+.notice {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+a {
+  color: var(--accent);
+}

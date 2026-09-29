@@ -1,0 +1,10 @@
+{
+  "name": "material-shape-studio",
+  "private": true,
+  "workspaces": ["packages/engine", "web"],
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "test": "npm run test -w web",
+    "build": "npm run build -w web"
+  }
+}

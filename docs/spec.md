@@ -45,7 +45,7 @@ web/                    Vite + React + TypeScript; workspace member depending on
 .github/workflows       ci.yml (every PR), deploy.yml (main -> GitHub Pages)
 ```
 
-`npm install` works without a Gradle build because the package exists with an empty `dist/`; running
+`npm install` works without a Gradle build because the package exists before its `dist/` is built; running
 or testing the web app needs `./gradlew :engine:jsPackage` first, which builds and copies. CI does
 both. `wasmJs` is a later optional target of the same module, not part of v1.
 
@@ -240,7 +240,7 @@ code's cubics with the document's fixture without any rounding step.
 
 `./gradlew check` runs the engine's tests; `npm test` runs vitest across workspaces; `npm run build`
 produces `web/dist`. `ci.yml` runs all three on every pull request from a clean checkout; `deploy.yml`
-builds on every push to `main` and publishes with `actions/deploy-pages`. Vite's `base` comes from
-the repository variable `SITE_BASE` (default `/`), so nothing in the code depends on the Pages URL
-and a custom domain is a variable change. The engine's production bundle size is measured by the
+builds on every push to `main` and publishes with `actions/deploy-pages`. Vite's `base` is `./`:
+the app routes only through the URL hash, so relative asset URLs work under any path, nothing
+depends on the Pages URL, and a custom domain is a Pages setting with no code change. The engine's production bundle size is measured by the
 build and recorded in the README after each change that affects it.
