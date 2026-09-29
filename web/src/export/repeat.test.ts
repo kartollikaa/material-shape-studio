@@ -2,7 +2,8 @@ import { buildCubics } from "@material-shape-studio/engine";
 import { describe, expect, it } from "vitest";
 import { CATALOGUE } from "../catalogue";
 import type { ShapeDocument } from "../document";
-import { KOTLIN_DIGITS, roundTo } from "./kotlin";
+import { KOTLIN_DIGITS } from "./kotlin";
+import { roundTo } from "./numbers";
 import { polygonCorners } from "./repeat";
 
 const repeated = Object.entries(CATALOGUE).filter(([, doc]) => doc.shape.kind === "polygon" && doc.shape.repeat);

@@ -1,9 +1,10 @@
-import { build } from "@material-shape-studio/engine";
+import { build, buildCubics } from "@material-shape-studio/engine";
 import { describe, expect, it } from "vitest";
 import { CATALOGUE_NAMES } from "../catalogue";
+import type { Point } from "../document";
 import {
-  addDot, canRemoveDot, History, isEdited, mainControls, moreControls, moveDot, pick, removeDot, restore, snapshot,
-  type EditorState,
+  addDot, canRemoveDot, History, isEdited, mainControls, moreControls, moveDot, pick, removeDot, restore, round3, snapshot,
+  viewTransforms, type EditorState, type Radii,
 } from "./editor";
 import { backward, forward } from "./geometry";
 
@@ -21,7 +22,25 @@ const PROTOTYPE_CONTROLS: Record<string, string> = {
   Sunny: "Points, Depth, Roundness, Rotate", Triangle: "Sides, Roundness, Rotate", VerySunny: "Repeats, Roundness, Rotate",
 };
 
+// From the prototype: why, min, max, step, and one value with how it is shown.
+const PROTOTYPE_RANGES: Record<string, [string, number, number, number, [number, string]]> = {
+  Repeats: ["How many times the pattern goes around the centre.", 2, 16, 1, [6, "6"]],
+  Roundness: ["How rounded the corners are.", 0, 2.5, 0.01, [0.5, "50%"]],
+  Points: ["How many points the shape has.", 3, 20, 1, [7, "7"]],
+  Depth: ["How deep the dips between the points go.", 0.05, 0.9, 0.01, [0.25, "25%"]],
+  Sides: ["How many corners the shape has.", 3, 12, 1, [5, "5"]],
+  Proportion: ["Width compared to height.", 0.5, 3, 0.01, [2, "2.00 : 1"]],
+  Squash: ["Flattens the circle into an oval.", 0.3, 1, 0.01, [0.64, "64%"]],
+  Rotate: ["", -180, 180, 1, [45, "45°"]],
+  Softness: ["Blends each corner smoothly into its sides.", 0, 1, 0.01, [0.6, "60%"]],
+  "Roundness of the selected dot": ["Click a dot on the shape to select it.", 0, 1.2, 0.005, [0.35, "0.35"]],
+};
+
 const builds = (s: EditorState) => build(JSON.stringify(s.doc));
+const radii = (r: Radii) => [r.rounding, r.innerRounding, ...(r.perVertexRounding ?? [])].filter((c) => !!c).map((c) => c.radius);
+const anchors = (cubics: ArrayLike<number>): Point[] =>
+  Array.from({ length: cubics.length / 8 }, (_, i) => [cubics[8 * i], cubics[8 * i + 1]]);
+const nearest = (p: Point, points: Point[]) => Math.min(...points.map(([x, y]) => Math.hypot(x - p[0], y - p[1])));
 
 describe("the adjust panel", () => {
   for (const name of CATALOGUE_NAMES) {
@@ -57,6 +76,29 @@ describe("the adjust panel", () => {
       }
     });
   }
+
+  it("every control keeps the prototype's wording, range, step and format", () => {
+    for (const name of CATALOGUE_NAMES) {
+      const s = pick(name);
+      for (const c of [...mainControls(s), ...moreControls(s)]) {
+        const [why, min, max, step, [value, shown]] = PROTOTYPE_RANGES[c.label];
+        expect([c.why, c.min, c.max, c.step, c.show(value)], `${name}: ${c.label}`).toEqual([why, min, max, step, shown]);
+      }
+    }
+  });
+
+  it("scales every corner from the shape's own radii", () => {
+    let checked = 0;
+    for (const name of CATALOGUE_NAMES) {
+      const s = pick(name);
+      const roundness = mainControls(s).find((c) => c.label === "Roundness");
+      if (!roundness) continue;
+      roundness.set(0.5);
+      expect(radii(s.doc.shape as Radii), name).toEqual(radii(s.base).map((r) => round3(r * 0.5)));
+      checked++;
+    }
+    expect(checked).toBe(CATALOGUE_NAMES.filter((n) => PROTOTYPE_CONTROLS[n].includes("Roundness")).length);
+  });
 
   it("covers the whole catalogue", () => {
     expect(Object.keys(PROTOTYPE_CONTROLS).sort()).toEqual([...CATALOGUE_NAMES].sort());
@@ -101,6 +143,15 @@ describe("editing state", () => {
     expect(() => builds(s)).not.toThrow();
   });
 
+  it("raises a repeating shape's count when a removal would leave fewer than three corners", () => {
+    const s = pick("Diamond");
+    expect(canRemoveDot(s)).toBe(true);
+    removeDot(s);
+    expect(s.doc.shape).toMatchObject({ vertices: [expect.anything()], repeat: { count: 3 } });
+    expect(canRemoveDot(s)).toBe(false);
+    expect(() => builds(s)).not.toThrow();
+  });
+
   it("undoes and redoes edits in order", () => {
     const history = new History();
     let s = pick("Cookie4Sided");
@@ -117,6 +168,24 @@ describe("editing state", () => {
 });
 
 describe("the preview's dot geometry", () => {
+  it("turns a point a quarter turn anticlockwise for 90 degrees", () => {
+    const [x, y] = forward([1, 0], [{ type: "rotate", degrees: 90 }]);
+    expect(x).toBeCloseTo(0, 9);
+    expect(y).toBeCloseTo(1, 9);
+  });
+
+  it("puts every dot on a corner of the shape the engine draws", () => {
+    for (const name of ["Heart", "Diamond", "Arrow"]) {
+      const s = pick(name);
+      if (s.doc.shape.kind !== "polygon") throw new Error(`${name} is a polygon`);
+      s.doc.shape.perVertexRounding = s.doc.shape.vertices.map(() => ({ radius: 0 }));
+      s.doc.transforms = [{ type: "scale", x: 1, y: 0.6 }, { type: "rotate", degrees: 30 }, { type: "normalize" }];
+      const transforms = viewTransforms(s.doc);
+      const corners = anchors(buildCubics(JSON.stringify({ ...s.doc, transforms })));
+      for (const dot of s.doc.shape.vertices) expect(nearest(forward(dot, transforms), corners), `${name} ${dot}`).toBeLessThan(1e-4);
+    }
+  });
+
   it("maps a point through rotations and scales and back", () => {
     const transforms = [{ type: "scale" as const, x: 1, y: 0.64 }, { type: "rotate" as const, degrees: -45 }];
     const [x, y] = backward(forward([0.3, -0.7], transforms), transforms);

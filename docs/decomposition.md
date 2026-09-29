@@ -23,11 +23,11 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 | S3a | `feature/s3a-exporters-catalogue` | The 35 Material shapes generated from Compose's source, and the Compose, SVG and CSS exporters, all tested | safe | ~600 | S1b | in-review |
 | S3b | `feature/s3b-studio-editor` | The studio's editing model: per-shape controls, dots, undo and redo, tested on every catalogue shape | safe | ~420 | S3a | in-review |
 | S3c | `feature/s3c-studio-page` | The approved prototype as the site: pick, adjust, see it in use, export; React leaves | safe | ~650 | S3b | in-review |
-| S4 | `feature/s4-editor-core` | Superseded by S3b: the owner chose the prototype's simpler editor | — | — | — | dropped |
-| S4b | `feature/s4b-direct-manipulation` | Superseded by S3b: dots on the shape cover direct editing; handles, ring and snapping are not wanted | — | — | — | dropped |
-| S4c | `feature/s4c-editor-conveniences` | Superseded by S3b: undo, reset and per-dot roundness ship there; the rest is not wanted | — | — | — | dropped |
-| S5 | `feature/s5-proof-and-share` | The compiled Compose round trip and a Playwright smoke test in CI, and share links that carry the document in the URL | safe | ~600 | S3b | planned |
-| S6 | `feature/s6-press-animation` | The shape morphs when pressed in the "In use" preview, and Compose gets the `Morph` code | safe | ~400 | S3b | planned |
+| S4 | `feature/s4-editor-core` | Superseded by S3b and S3c: the owner chose the prototype's simpler editor | — | — | — | dropped |
+| S4b | `feature/s4b-direct-manipulation` | Superseded by S3b and S3c: dots on the shape cover direct editing; handles, ring and snapping are not wanted | — | — | — | dropped |
+| S4c | `feature/s4c-editor-conveniences` | Superseded by S3b and S3c: undo, reset and per-dot roundness ship there; the rest is not wanted | — | — | — | dropped |
+| S5 | `feature/s5-proof-and-share` | A Playwright smoke test in CI, and share links that carry the document in the URL | safe | ~600 | S3c | planned |
+| S6 | `feature/s6-press-animation` | The shape morphs when pressed in the "In use" preview, and Compose gets the `Morph` code | safe | ~400 | S3c | planned |
 | S7 | `feature/s7-import` | Paste an SVG path, see and retype its features, keep it as a `features` document and export it | safe | ~600 | S5 | planned |
 | S8 | `feature/s8-more-exporters` | Java (Views), Dart, Swift and TypeScript exporters | safe | ~700 | S7 | planned |
 | S9 | `feature/s9-gallery-site` | A contributed-shapes gallery, user docs and custom-domain readiness | safe | ~400 | S8 | planned |
@@ -35,7 +35,7 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 Status values: `planned · in-progress · in-review · merged · dropped`
 
 Every slice is naturally safe: the site is additive and each slice ships a complete capability, so
-no feature toggles and no cleanup slices are needed. Budgets above 600 (S1, S1b, S3a, S3b, S8) carry a
+no feature toggles and no cleanup slices are needed. Budgets above 600 (S1, S1b, S3c, S8) carry a
 named re-cut or a size justification in their details; the diff is sized before the PR opens.
 
 ## Slice details
@@ -92,14 +92,17 @@ named re-cut or a size justification in their details; the diff is sized before 
 ### S2 — `feature/s2-catalogue`
 - **In scope:** the 35 documents as engine data with a NOTICE entry, `kind: "catalogue"`,
   `catalogue()`, `matchCatalogue` and the `catalogue` field of the build result, the JVM sync test against `MaterialShapes` from the Compose
-  Multiplatform desktop artifact pinned in the version catalogue, fixtures regenerated.
+  Multiplatform desktop artifact pinned in the version catalogue, fixtures regenerated; the studio
+  reads its shapes from the engine, and `web/src/catalogue` with its generator is retired.
+- **Must land before** the generator's pinned androidx commit moves: until the sync test exists,
+  nothing independent checks the generated shapes against Compose.
 - **Out of scope:** showing the catalogue (S3b).
 - **Acceptance:** (1) all 35 vendored documents match Compose's cubics within 1e-4; (2) changing
   one vendored number fails the sync test, shown once; (3) `matchCatalogue` recognises each
   entry built from its own document and returns null for a modified one; (4) the parity suite
   covers the 35. Proof: sync test output, the deliberate-break run.
 - **Ships safely because:** engine only.
-- **Cleanup owed:** none.
+- **Cleanup owed:** none; S2 itself retires the web catalogue.
 
 ### S3a — `feature/s3a-exporters-catalogue`
 - **In scope:** `web/scripts/generate-catalogue.mjs`, which reads `MaterialShapes.kt` at a pinned
@@ -130,6 +133,8 @@ named re-cut or a size justification in their details; the diff is sized before 
   CSS. React leaves the project. A DOM test of the page. Spec §2 and §6 and the README describe the
   studio.
 - **Out of scope:** share links and the Playwright test (S5); the press animation (S6).
+- **Size:** over the target and under the cap, because the page, its styles and its DOM test are
+  only useful together.
 - **Ships safely because:** it replaces the placeholder with a complete tool.
 - **Cleanup owed:** none.
 
@@ -138,13 +143,10 @@ The owner found the fuller editor these slices described too complex and approve
 simpler one, which S3b ships.
 
 ### S5 — `feature/s5-proof-and-share`
-- **In scope:** a CI job that compiles the Compose export for every catalogue shape and a set of
-  edited ones against `graphics-shapes` and compares the geometry with the engine; a Playwright smoke
-  test on the built site; share links, with the document in the URL hash; engine limits for
+- **In scope:** a Playwright smoke test on the built site; share links, with the document in the URL hash; engine limits for
   documents that arrive from a link (finite numbers within the float range, caps on vertex and
   repeat counts, quoted scalars rejected, messages that name the missing field).
-- **Acceptance:** (1) the compiled round trip runs in CI and fails when the exporter is broken on
-  purpose; (2) the smoke test picks a shape, moves a slider and copies the Compose code; (3) a share
+- **Acceptance:** (1) the smoke test picks a shape, moves a slider and copies the Compose code; (2) a share
   link reopens the same shape, and a corrupt link opens the studio with a notice.
 - **Ships safely because:** additive.
 - **Cleanup owed:** none.
@@ -232,3 +234,7 @@ simpler one, which S3b ships.
   The engine hardening deferred to S3 moves to S5, where documents first arrive from a link.
 - 2026-09-29: S3b measured about 1,070 reviewable lines, over the cap. Split into S3b, the editing
   model, and S3c, the page with React's removal and the docs.
+- 2026-09-29: S3a's review asked for durable proof of the Compose export. The compiled round trip
+  moved from S5 into S3a and runs in CI over every catalogue shape, every exportable engine fixture
+  and a set of edited shapes. S2 must land before the catalogue's pinned commit moves, and it
+  retires the web catalogue.

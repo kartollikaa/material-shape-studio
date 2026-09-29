@@ -61,6 +61,35 @@ describe("the Compose export", () => {
     expect(kotlinFile(CATALOGUE.Heart, { catalogueName: "Heart", colour: "#1a2b3c" })).toContain(".background(Color(0xFF1A2B3C))");
   });
 
+  it("opens with the dependency it needs", () => {
+    expect(kotlinFile(CATALOGUE.Heart, { catalogueName: "Heart", colour: PURPLE }).split("\n")[0]).toBe(
+      "// Needs Compose Material 3 with the Expressive API (MaterialShapes and toShape).",
+    );
+    expect(kotlinFile(CATALOGUE.Heart, { catalogueName: null, colour: PURPLE }).split("\n")[0]).toContain("and androidx.graphics:graphics-shapes");
+  });
+
+  it("drops transforms that change nothing and folds signs into offsets", () => {
+    const { code } = kotlinExpression({ v: 1, shape: { kind: "circle" }, transforms: [{ type: "rotate", degrees: 360 }, { type: "scale", x: 1, y: 1 }, { type: "translate", x: -0.5, y: 1 }] });
+    expect(code).toBe("RoundedPolygon.circle().transformed { x, y -> TransformResult(x - 0.5f, y + 1f) }");
+  });
+
+  it("writes one rounding when every corner of a polygon is rounded alike", () => {
+    const doc = edited("PixelCircle", (d) => { if (d.shape.kind === "polygon") d.shape.perVertexRounding = d.shape.perVertexRounding!.map(() => ({ radius: 0.05 })); });
+    const { code } = kotlinExpression(doc);
+    expect(code).toContain("    rounding = CornerRounding(0.05f),");
+    expect(code).not.toContain("perVertexRounding");
+    expect(kotlinExpression(CATALOGUE.PixelCircle).code).not.toMatch(/rounding/i);
+  });
+
+  it("escapes a feature string for a Kotlin string literal", () => {
+    const { code } = kotlinExpression({ v: 1, shape: { kind: "features", serialized: 'V1"$\\' } });
+    expect(code).toContain('FeatureSerializer.parse("V1\\"\\$\\\\")');
+  });
+
+  it("accepts a short hex colour", () => {
+    expect(kotlinFile(CATALOGUE.Heart, { catalogueName: "Heart", colour: "#abc" })).toContain("Color(0xFFAABBCC)");
+  });
+
   it("exports every catalogue shape both as MaterialShapes and as a constructor", () => {
     for (const name of CATALOGUE_NAMES) {
       expect(kotlinFile(CATALOGUE[name], { catalogueName: name, colour: PURPLE })).toContain(`MaterialShapes.${name}.toShape()`);
