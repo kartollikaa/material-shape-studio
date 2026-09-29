@@ -31,12 +31,13 @@ gets cubic Béziers out, which it renders as SVG.
 
 ```
 engine/                 Gradle, Kotlin Multiplatform: jvm() + js()
-  src/commonMain        document model + validation, builders, catalogue data, façade (@JsExport)
+  src/commonMain        document model + validation, builders, catalogue data, ShapeEngine
+  src/jsMain            the @JsExport façade
   src/commonTest        document round trips, validation
   src/jvmTest           fixture generation, catalogue sync test, Kotlin exporter round trip
   fixtures/             committed golden cubics, one JSON per document
 packages/engine/        npm package @material-shape-studio/engine; dist/ is copied from the
-                        Kotlin/JS build (ES module + .d.ts), never committed
+                        Kotlin/JS build (ES module + .d.mts), never committed
 web/                    Vite + React + TypeScript; workspace member depending on the package above
   src/document          types, defaults, URL codec
   src/engine            typed wrapper over the façade
@@ -45,9 +46,10 @@ web/                    Vite + React + TypeScript; workspace member depending on
 .github/workflows       ci.yml (every PR), deploy.yml (main -> GitHub Pages)
 ```
 
-`npm install` works without a Gradle build because the package exists before its `dist/` is built; running
-or testing the web app needs `./gradlew :engine:jsPackage` first, which builds and copies. CI does
-both. `wasmJs` is a later optional target of the same module, not part of v1.
+`npm install` works without a Gradle build because the package exists before its `dist/` is built.
+Testing or running anything that imports the engine needs `./gradlew build` first, which runs the
+engine's tests and syncs the whole-program ES module and its `.d.mts` into `dist/`; `npm test` refuses
+to run without it. CI does both. `wasmJs` is a later optional target of the same module, not part of v1.
 
 ## 3. The shape document
 
@@ -84,7 +86,7 @@ type Transform =
   | { type: "scale"; x: number; y: number }     // about the origin
   | { type: "translate"; x: number; y: number }
   | { type: "fillSquare" }                      // stretch so the bounds become exactly (0,0)-(1,1)
-  | { type: "startAngle"; degrees: number }     // where the path starts; last only; no geometry change
+  | { type: "startAngle"; degrees: integer }    // as Compose's toShape(startAngle); last only
 ```
 
 Rules:
@@ -92,12 +94,19 @@ Rules:
 - An absent optional field means the library default, and exporters omit it too. That keeps emitted
   code as short as the catalogue's own source.
 - `polygon.repeat` expands the slice exactly as Material's private `customPolygon` does (the engine
-  vendors that algorithm). `perVertexRounding` applies to the slice, before expansion. Exporters
+  vendors that algorithm), about `center`, which defaults to (0.5, 0.5) as it does there.
+  `perVertexRounding` applies to the slice, before expansion. Exporters
   always emit the expanded vertex list, since no platform exposes the slice helper.
 - `perVertexRounding`, when present, must have one entry per vertex the library constructor receives:
   the slice length for `polygon`, `vertices` for `ngon`, 4 for `rectangle`, `2 × verticesPerRadius`
   for `star` and `pillStar`. `rounding` is the fallback for vertices without an entry.
-- For `features` without `center`, the engine uses the centre of the features' bounds.
+- For `features` without `center`, the engine uses the library default: the average of the
+  features' anchor points.
+- `startAngle` rotates the whole shape about the origin so that its first point lies at `degrees`
+  from the polygon's centre, as Compose's `toShape(startAngle)` does; `0` leaves the shape alone,
+  as there. It changes the geometry, so it is a real transform. Compose then recentres every
+  `toShape()` outline by its bounds when it draws; the engine does not recentre, and the preview
+  does that step (§6).
 - Transforms apply in order after the shape is built. New documents created in the editor start with
   `[normalize]`; the export panel warns when the final bounds leave the unit square, because Compose's
   `toShape()` scales the unit square to the component size.
@@ -127,7 +136,7 @@ control0Y, control1X, control1Y, anchor1X, anchor1Y`. Errors are thrown; JavaScr
 `Error` whose message is the validator's or the library's.
 
 ```ts
-version(): string                              // engine version + graphics-shapes version
+version(): string                              // JSON {engine, graphicsShapes}
 catalogue(): string                            // JSON: [{ name, doc: ShapeDocument }] for all 35
 build(doc: string): string                     // JSON BuildResult
 buildCubics(doc: string): Float32Array         // the cubics only, for hot paths
@@ -147,8 +156,9 @@ type Feature = { type: "convex" | "concave" | "edge" | "ignorable"; cubics: numb
 
 Only edge, convex and concave features serialise, as in the library. The import screen therefore
 requires every `ignorable` feature to be retyped before the document can be exported. The façade is
-the whole public surface of the engine; the JVM side exposes the same functions as ordinary Kotlin for
-tests and a possible later CLI.
+the whole public surface of the engine for JavaScript. On the JVM the same engine is ordinary Kotlin,
+`ShapeEngine.parse` and `ShapeEngine.build` returning a `BuiltShape`, used by the tests and a possible
+later CLI.
 
 ## 5. Catalogue
 
@@ -164,8 +174,9 @@ Multiplatform desktop artifact, so an upstream change fails the build. Names are
 
 One page, four views selected by `view=` in the URL, with a persistent preview and export panel.
 
-- **Preview** (every view): the shape rendered as an SVG path in a square viewport, fitted to the
-  built bounds; controls for size, fill or outline, light or dark; the same component draws the
+- **Preview** (every view): the shape rendered as an SVG path in a square viewport the way Compose's
+  `toShape()` draws it: the unit square scaled to the viewport, then centred by the shape's bounds;
+  controls for size, fill or outline, light or dark; the same component draws the
   catalogue thumbnails and the morph frame.
 - **Catalogue**: a grid of the 35 shapes; click opens one in the editor as its own document; a
   second click (or a "morph to" action) sets it as the morph target.
@@ -225,8 +236,14 @@ code's cubics with the document's fixture without any rounding step.
 
 ## 8. Fidelity and tests
 
-- **Engine parity**: a JVM test builds every fixture document and writes `engine/fixtures/*.json`; a
-  vitest suite runs the JS engine over the same documents and compares cubics within 1e-5.
+- **Engine parity**: `engine/fixtures/documents/` holds the fixture documents and
+  `engine/fixtures/expected/` their JVM-built output, both committed. A JVM test requires the output
+  to match exactly, so drift fails instead of being rewritten; only `./gradlew :engine:jvmTest
+  -PupdateFixtures` regenerates. A vitest suite runs the JS engine over the same documents and
+  compares cubics within 1e-5, with the same count. That guarantee holds away from the library's
+  1e-4 epsilon: Kotlin/JS keeps the library's `Float` constants as doubles while arrays store
+  float32, so a feature whose length or cut sits within float rounding of 1e-4 can be dropped on one
+  target and kept on the other. Fixtures therefore stay clear of such degenerate edges.
 - **Catalogue sync**: the JVM test of section 5.
 - **Kotlin round trip**: the Kotlin exporter's output for every fixture document is written into a
   generated JVM test source set, compiled and rendered in CI; cubics must equal the fixture.
@@ -238,9 +255,10 @@ code's cubics with the document's fixture without any rounding step.
 
 ## 9. Build, CI and hosting
 
-`./gradlew check` runs the engine's tests; `npm test` runs vitest across workspaces; `npm run build`
+`./gradlew build` runs the engine's tests and packages it; `npm test` runs vitest in each workspace; `npm run build`
 produces `web/dist`. `ci.yml` runs all three on every pull request from a clean checkout; `deploy.yml`
-builds on every push to `main` and publishes with `actions/deploy-pages`. Vite's `base` is `./`:
+builds on every push to `main` and publishes with `actions/deploy-pages`, packaging the engine with `./gradlew :engine:jsPackage` before building the site. Vite's `base` is `./`:
 the app routes only through the URL hash, so relative asset URLs work under any path, nothing
-depends on the Pages URL, and a custom domain is a Pages setting with no code change. The engine's production bundle size is measured by the
-build and recorded in the README after each change that affects it.
+depends on the Pages URL, and a custom domain is a Pages setting with no code change. The engine's
+production size is measured by `npm run size -w packages/engine` and recorded in the README after
+each change that affects it.

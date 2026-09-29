@@ -16,9 +16,10 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 
 | # | PR title | Purpose (one sentence) | Strategy | Size budget | Depends on | Status |
 |---|----------|------------------------|----------|-------------|------------|--------|
-| S0 | `tech/s0-scaffold` | A buildable, deployable skeleton: Gradle KMP engine, npm workspace, licence, CI and Pages deploy of a placeholder page | safe | ~300 | — | in-progress |
-| S1 | `feature/s1-engine-facade` | The engine builds any document to cubics in JVM and JS, proven equal by golden fixtures, with its bundle size known | safe | ~800 | S0 | planned |
-| S2 | `feature/s2-catalogue` | The 35 catalogue shapes as vendored documents, proven equal to Compose's `MaterialShapes` | safe | ~500 | S1 | planned |
+| S0 | `tech/s0-scaffold` | A buildable, deployable skeleton: Gradle KMP engine, npm workspace, licence, CI and Pages deploy of a placeholder page | safe | ~300 | — | in-review |
+| S1 | `feature/s1-engine-pipeline` | The engine builds `ngon` and `polygon` (with repeat) documents plus `normalize` in JVM and JS, proven equal by golden fixtures, packaged with types, its bundle size known | safe | ~960, justified | S0 | in-progress |
+| S1b | `feature/s1b-engine-document` | Every remaining shape kind and transform, and morph handles, through the same pipeline | safe | ~650 | S1 | planned |
+| S2 | `feature/s2-catalogue` | The 35 catalogue shapes as vendored documents, proven equal to Compose's `MaterialShapes` | safe | ~500 | S1b | planned |
 | S3 | `feature/s3-ui-shell` | A site that shows the catalogue with a live preview and carries the document in the URL | safe | ~650 | S2 | planned |
 | S4 | `feature/s4-editor-core` | Create and edit any document kind with sliders and numeric inputs, drag slice vertices, edit the transforms list | safe | ~600 | S3 | planned |
 | S4b | `feature/s4b-direct-manipulation` | Corner and builder handles on the canvas, vertex insert and delete, rotation ring, snapping | safe | ~600 | S4 | planned |
@@ -32,8 +33,8 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 Status values: `planned · in-progress · in-review · merged · dropped`
 
 Every slice is naturally safe: the site is additive and each slice ships a complete capability, so
-no feature toggles and no cleanup slices are needed. Budgets above 600 (S1, S3, S5, S8) carry a
-named re-cut in their details; the diff is sized before the PR opens. S5 depends on S4 core only,
+no feature toggles and no cleanup slices are needed. Budgets above 600 (S1b, S3, S5, S8) carry a
+named re-cut or a size justification in their details; the diff is sized before the PR opens. S5 depends on S4 core only,
 so S4b and S4c can move after S5 if export is wanted sooner.
 
 ## Slice details
@@ -53,27 +54,41 @@ so S4b and S4c can move after S5 if export is wanted sooner.
 - **Ships safely because:** nothing user-facing beyond a placeholder page.
 - **Cleanup owed:** none.
 
-### S1 — `feature/s1-engine-facade`
-- **In scope:** the document model and validator (kotlinx.serialization), all shape kinds of spec
-  §3 including `features` by string, transforms, the vendored repeat-and-mirror expansion, the
-  catalogue registry (empty until S2), the façade of spec §4 except the three import functions,
-  generated `.d.ts`, the `jsPackage` task that copies the ES module into `packages/engine/dist`,
-  JVM fixture generation into `engine/fixtures`, the vitest parity suite, the bundle size recorded
-  in the README.
-- **Out of scope:** catalogue data (S2), SVG import functions (S7), any UI.
-- **Acceptance:** (1) every document kind builds on JVM and JS; (2) the parity suite compares all
-  fixtures within 1e-5 and passes; (3) breaking a vendored constant makes the parity suite fail,
-  shown once in the PR; (4) an invalid document throws a message naming the field, on both
-  targets; (5) morph handles produce cubics at any progress and are released; (6) the production
-  bundle size is measured and written into the README, with a remedy proposed if it is too heavy
-  for a tool page. Proof: test output on both targets, the deliberate-break run, the size line.
-- **Re-cut if over budget:** the morph handles move to S6.
+### S1 — `feature/s1-engine-pipeline`
+- **In scope:** the document model and validator (kotlinx.serialization) for `ngon` and `polygon`
+  with `repeat`, and the `normalize` transform; the vendored repeat-and-mirror expansion; the façade
+  `version`, `build` and `buildCubics`; generated `.d.mts`; `./gradlew build` syncing the ES module
+  into `packages/engine/dist`; committed golden fixtures checked exactly on the JVM; the vitest
+  parity suite; the bundle size recorded in the README.
+- **Out of scope:** the other kinds and transforms, morph (S1b); the catalogue (S2); import (S7).
+- **Acceptance:** frozen as AC-1..AC-17 before the code; the headline ones are parity within 1e-5
+  for every fixture, a deliberate break failing both suites, invalid documents naming the field on
+  both targets, `npm test` refusing to run before the engine is built, and the size recorded.
+- **Size:** about 960 reviewable lines, 430 of them tests. The one separable piece is the repeat
+  expansion, about 180 lines, but it is the vendored Material code most likely to drift, half the
+  fixtures depend on it, and the deliberate-break proof targets it; without it this PR would prove
+  parity only for plain library constructors.
 - **Ships safely because:** engine only; the site is unchanged.
 - **Cleanup owed:** none.
 
+### S1b — `feature/s1b-engine-document`
+- **In scope:** `circle`, `rectangle`, `star`, `pill`, `pillStar`, `features` (by serialised
+  string, centre defaulting to the anchor average); `rotate`, `scale`, `translate`, `fillSquare`,
+  `startAngle` with Compose's `toShape(startAngle)` semantics and the last-only rule; `features` in
+  the build result; the morph handles `createMorph`, `morphCubics`, `morphBounds`, `releaseMorph`;
+  fixtures for every new kind and transform.
+- **Out of scope:** the catalogue (S2); SVG import (S7).
+- **Acceptance:** (1) every kind in spec §3 except `catalogue` builds to the same cubics as its library constructor on
+  both targets; (2) each transform has a fixture and a test of its documented geometry; (3) parity
+  holds for every new fixture; (4) morph handles return cubics at any progress, match the fixture
+  at 0, 0.5 and 1, and a released handle throws; (5) the new validation rules name their field.
+- **Re-cut if over budget:** the morph handles move to S6.
+- **Ships safely because:** engine only.
+- **Cleanup owed:** none.
+
 ### S2 — `feature/s2-catalogue`
-- **In scope:** the 35 documents as engine data with a NOTICE entry, `catalogue()` and
-  `matchCatalogue` implemented, the JVM sync test against `MaterialShapes` from the Compose
+- **In scope:** the 35 documents as engine data with a NOTICE entry, `kind: "catalogue"`,
+  `catalogue()`, `matchCatalogue` and the `catalogue` field of the build result, the JVM sync test against `MaterialShapes` from the Compose
   Multiplatform desktop artifact pinned in the version catalogue, fixtures regenerated.
 - **Out of scope:** showing the catalogue (S3).
 - **Acceptance:** (1) all 35 vendored documents match Compose's cubics within 1e-4; (2) changing
@@ -212,3 +227,15 @@ so S4b and S4c can move after S5 if export is wanted sooner.
 - 2026-09-28: S0 replaces the `SITE_BASE` repository variable with a relative Vite `base`. The app
   routes only through the hash, so no variable is needed and a custom domain is a Pages setting.
   S0 stacks on the spec PR, so CI runs on pull requests to any base branch.
+- 2026-09-28: S1 as mapped measured about 1,200 reviewable lines, over the cap even without morph.
+  Re-cut vertically: S1 proves the pipeline end to end on `ngon`, `polygon` with `repeat` and
+  `normalize`; S1b adds the other kinds, transforms and morph. `catalogue()`, `matchCatalogue` and
+  `kind: "catalogue"` move wholly to S2 rather than shipping as empty stubs.
+- 2026-09-28: reading Compose's source corrected the spec: `startAngle` rotates the drawn shape (it
+  is not only a start point), a `features` shape's default centre is the anchor average, and
+  `toShape()` maps the unit square to the component rather than fitting the bounds. S1b and S3
+  implement those.
+- 2026-09-28: the S1 gate showed the engine's own tests import it through the package's
+  self-reference, so they did not prove a second workspace can consume it. `web` now depends on the
+  engine package from S1, with a test that imports it, and the deploy packages the engine before it
+  builds the site; S3 no longer carries that wiring.
