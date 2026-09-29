@@ -238,3 +238,6 @@ simpler one, which S3b ships.
   moved from S5 into S3a and runs in CI over every catalogue shape, every exportable engine fixture
   and a set of edited shapes. S2 must land before the catalogue's pinned commit moves, and it
   retires the web catalogue.
+- 2026-09-29: S3c's review fixes (keyboard focus, failure paths, tests for both) took it just past
+  the line cap. It stays one pull request: splitting after review would send the same page back
+  for review in two halves.
