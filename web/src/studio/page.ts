@@ -44,7 +44,11 @@ export function mountStudio(page: Document) {
     const focused = container.contains(page.activeElement) ? page.activeElement?.getAttribute("data-focus") : null;
     container.replaceChildren();
     fill();
-    if (focused) Array.from(container.querySelectorAll<HTMLElement | SVGElement>("[data-focus]")).find((e) => e.dataset.focus === focused)?.focus();
+    if (!focused) return;
+    const usable = (e?: Element | null) => !!e && !(e as HTMLButtonElement).disabled;
+    const target = Array.from(container.querySelectorAll<HTMLElement | SVGElement>("[data-focus]")).find((e) => e.dataset.focus === focused);
+    const fallback = Array.from(target?.parentElement?.querySelectorAll<HTMLElement>("[data-focus]") ?? []).find(usable);
+    (usable(target) ? target : fallback)?.focus();
   };
   const normalizedCubics = () => {
     try {

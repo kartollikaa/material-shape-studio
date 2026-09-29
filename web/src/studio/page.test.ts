@@ -1,8 +1,10 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { build, buildCubics } from "@material-shape-studio/engine";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mountStudio } from "./page";
+import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
+import { svgPath } from "../export/svg";
+import { displayName, mountStudio } from "./page";
 
 vi.mock("@material-shape-studio/engine", async (importOriginal) => {
   const engine = await importOriginal<typeof import("@material-shape-studio/engine")>();
@@ -49,15 +51,27 @@ afterEach(() => {
 });
 
 describe("the studio page", () => {
-  it("offers the 35 Material shapes and names the picked one", () => {
-    const thumbs = Array.from(document.querySelectorAll("#picker .thumb"));
-    expect(thumbs).toHaveLength(35);
-    expect(thumbs[0].getAttribute("aria-label")).toBe("Circle");
+  it("offers the 35 Material shapes as named buttons, and picking one selects and names it", () => {
+    const thumbs = () => Array.from(document.querySelectorAll("#picker .thumb"));
+    expect(thumbs().map((t) => [t.tagName, t.getAttribute("aria-label")])).toEqual(CATALOGUE_NAMES.map((n) => ["BUTTON", displayName(n)]));
+    expect(thumbs()[0].getAttribute("aria-label")).toBe("Circle");
     expect(document.querySelector('[data-name="Cookie4Sided"]')!.getAttribute("aria-pressed")).toBe("true");
+    for (const name of CATALOGUE_NAMES) {
+      click(document.querySelector(`[data-name="${name}"]`)!);
+      expect(thumbs().filter((t) => t.getAttribute("aria-pressed") === "true").map((t) => t.getAttribute("data-name")), name).toEqual([name]);
+      expect(byId("shape-name").textContent).toBe(`· ${displayName(name)}`);
+    }
     click(document.querySelector('[data-name="Heart"]')!);
-    expect(byId("shape-name").textContent).toBe("· Heart");
-    expect(document.querySelector('[data-name="Heart"]')!.getAttribute("aria-pressed")).toBe("true");
     expect(labels("#controls label")).toEqual(["Roundness", "Rotate"]);
+  });
+
+  it("names a tab icon that the site ships", () => {
+    const head = new DOMParser().parseFromString(markup, "text/html");
+    const icon = head.querySelector('link[rel="icon"]')!.getAttribute("href")!;
+    expect(icon).toBe("/favicon.svg");
+    const file = resolve(process.cwd(), "public", icon.slice(1));
+    expect(existsSync(file)).toBe(true);
+    expect(new DOMParser().parseFromString(readFileSync(file, "utf8"), "image/svg+xml").querySelector("parsererror")).toBeNull();
   });
 
   it("draws the shape with its dots, and no dots for a builder shape", () => {
@@ -83,6 +97,20 @@ describe("the studio page", () => {
     expect(byId("reset").hidden).toBe(true);
   });
 
+  it("steps back and forward through several edits", () => {
+    const rotation = () => slider("Rotate").value;
+    slide("Rotate", 30);
+    slide("Rotate", 60);
+    const seen = [rotation()];
+    for (const button of ["undo", "undo", "redo", "redo"]) {
+      click(byId(button));
+      seen.push(rotation());
+    }
+    expect(seen).toEqual(["60", "30", "0", "30", "60"]);
+    expect(undoButton().disabled).toBe(false);
+    expect((byId("redo") as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("exports MaterialShapes for an untouched shape and MyShape after an edit", () => {
     expect(exportCode()).toContain(".clip(MaterialShapes.Cookie4Sided.toShape())");
     slide("Repeats", 6);
@@ -104,13 +132,22 @@ describe("the studio page", () => {
     expect(labels("#export-buttons button")).toEqual(["Copy code"]);
   });
 
-  it("shows the shape in use as a photo, an icon button and an avatar", () => {
+  it("shows the current shape in use as a photo, an icon button and an avatar", () => {
     expect(labels("#in-use figcaption")).toEqual(["Photo", "Icon button", "Avatar"]);
-    const shapePath = document.querySelector("#in-use clipPath path")!.getAttribute("d");
-    expect(shapePath).toMatch(/^M[\d.]+ [\d.]+C/);
-    for (const figure of Array.from(document.querySelectorAll("#in-use figure")).slice(1)) {
-      expect(figure.querySelector("path")!.getAttribute("d")).toBe(shapePath);
-    }
+    const inUse = () => {
+      const photo = document.querySelector("#in-use clipPath path")!.getAttribute("d");
+      expect(document.querySelector("#in-use g")!.getAttribute("clip-path")).toBe("url(#clip-photo)");
+      for (const figure of Array.from(document.querySelectorAll("#in-use figure")).slice(1)) {
+        expect(figure.querySelector("path")!.getAttribute("d")).toBe(photo);
+      }
+      return photo;
+    };
+    const pathOf = (name: string) => svgPath(buildCubics(JSON.stringify(CATALOGUE[name])), 1, 4);
+    expect(inUse()).toBe(pathOf("Cookie4Sided"));
+    click(document.querySelector('[data-name="Heart"]')!);
+    expect(inUse()).toBe(pathOf("Heart"));
+    slide("Rotate", 30);
+    expect(inUse()).not.toBe(pathOf("Heart"));
   });
 
   it("keeps More options for shapes that have them", () => {
@@ -199,6 +236,15 @@ describe("the keyboard", () => {
     const before = position(selectedDot());
     press("ArrowRight", {}, slider("Rotate"));
     expect(position(selectedDot())).toEqual(before);
+  });
+
+  it("moves focus to the next usable button when the pressed one turns itself off", () => {
+    click(document.querySelector('[data-name="Diamond"]')!);
+    const remove = () => Array.from(document.querySelectorAll<HTMLButtonElement>("#more-controls button")).find((b) => b.textContent === "Remove the selected dot")!;
+    remove().focus();
+    click(remove());
+    expect(remove().disabled).toBe(true);
+    expect(document.activeElement?.textContent).toBe("Add a dot");
   });
 
   it("keeps focus on a button that changes the shape", () => {

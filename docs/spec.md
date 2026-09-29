@@ -8,13 +8,14 @@ What the app does and how its parts fit. The reasoning behind the architecture i
 
 A static web app for designers and developers working with Material 3 Expressive shapes:
 
-1. **Browse** the 35-shape `MaterialShapes` catalogue, at any size, light and dark, filled or outlined.
+1. **Browse** the 35-shape `MaterialShapes` catalogue, light and dark, and start from any of them.
 2. **Create** a shape with Material's own vocabulary: the library builders, and a custom polygon
    made of one slice of vertices repeated around the centre, optionally mirrored, with a radius and a
    smoothing per corner.
 3. **Imitate** a shape from an SVG path: detect its features, retype a corner the detector misread,
    keep the result as a `FeatureSerializer` string.
-4. **Morph** between any two shapes and scrub the progress.
+4. **Morph** the shape when it is pressed, the way Material's components do, and export the Compose
+   `Morph` for it.
 5. **Export** the shape as code for platforms with a port of `androidx.graphics.shapes`, and as SVG,
    PNG and CSS for those without; share it as a URL that carries the whole document.
 
@@ -188,9 +189,9 @@ app. It follows the system's light or dark setting.
   dragging a dot moves that vertex, and the repeated pattern follows. Arrow keys nudge the selected
   dot, Shift for larger steps. Below it, **In use** shows the shape as a photo, an icon button and an
   avatar.
-- **2 · Adjust**: only the sliders that change the selected shape, each with a one-line reason:
-  Repeats for patterns that repeat, Points and Depth for stars, Sides for n-gons, Proportion for
-  rectangles, Squash for circles, Roundness, and Rotate where it shows. Roundness scales every
+- **2 · Adjust**: only the sliders that change the selected shape, each but Rotate with a one-line
+  reason: Repeats for patterns that repeat, Points and Depth for stars, Sides for n-gons, Proportion
+  for rectangles, Squash for circles, Roundness, and Rotate where it shows. Roundness scales every
   corner of Material's recipe together; sharp shapes start at 0%. Then Colour, used in the preview
   and the exports. **Reset** appears once the shape differs from Material's. **More options**,
   closed by default, holds Softness, the roundness of the selected dot, and adding or removing a
