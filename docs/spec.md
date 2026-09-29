@@ -114,9 +114,10 @@ Rules:
   coordinates `bounds` and `normalize` differ from the true extent; the engine keeps that for them, as
   Compose does, and a fixture pins it. `fillSquare` is the engine's own transform, so it measures the
   true extent and always reaches the unit square.
-- Transforms apply in order after the shape is built. New documents created in the editor start with
-  `[normalize]`; the export panel warns when the final bounds leave the unit square, because Compose's
-  `toShape()` scales the unit square to the component size.
+- Transforms apply in order after the shape is built. Documents in the studio start from a catalogue
+  shape and keep its closing `normalize`, so their bounds stay in the unit square. Later, when a
+  document can arrive from a link, the export panel warns when its final bounds leave the unit
+  square, because Compose's `toShape()` scales the unit square to the component size.
 - Validation is in the engine (common Kotlin) and rejects: fewer than three vertices, a rounding
   array of the wrong length, `smoothing` outside 0..1, `repeat.count < 1`, a `startAngle` not last,
   an unknown `kind`, `name` or `type`, a `v` other than 1. The message names the field.
