@@ -1,15 +1,19 @@
 # Material Shape Studio
 
-A web editor for the shapes of Material 3 Expressive: browse the catalogue, create
-new shapes in Material's own vocabulary, imitate a shape from an SVG path, preview morphs, and export
-code for the platforms that have a port of `androidx.graphics.shapes`, plus SVG, PNG and CSS.
+A web editor for the shapes of Material 3 Expressive: start from one of Material's shapes, reshape
+it, see it in use, and export it as code for the platforms that have a port of
+`androidx.graphics.shapes`, plus SVG, PNG and CSS.
 
 An independent open-source project, not affiliated with or endorsed by Google. Material Design is a
 trademark of Google LLC.
 
-The engine builds every shape kind and transform of the document format, including Material's
-repeat-and-mirror slices, and morphs between shapes, on the JVM and in JavaScript. The site is still
-a placeholder page; the editor arrives slice by slice. Read in this order:
+The studio is live at https://kartollikaa.github.io/material-shape-studio/. Pick one of Material's 35
+shapes, adjust it with a few plain sliders or by dragging its dots, see it on a photo, an icon
+button and an avatar, and export it as Compose code, SVG, PNG or CSS. An untouched shape exports
+as Material's own `MaterialShapes` entry.
+
+Under it, the engine runs Google's `graphics-shapes` in the browser, so what you see is what
+Compose draws. Read in this order:
 
 1. [docs/spec.md](docs/spec.md): what the app does and how its parts fit.
 2. [docs/decomposition.md](docs/decomposition.md): the delivery plan, one pull request per slice.
@@ -54,7 +58,14 @@ needs `./gradlew build` first. Asset URLs are relative, so the site can be serve
 npm run dev -w web
 ```
 
-Starts a local development server.
+Starts the studio on a local development server.
+
+```bash
+npm run catalogue -w web
+```
+
+Regenerates `web/src/catalogue/catalogue.json` from Compose's `MaterialShapes.kt` at the pinned
+androidx commit in `web/scripts/generate-catalogue.mjs`. Change the commit there to follow upstream.
 
 ## The engine package
 

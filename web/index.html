@@ -4,11 +4,59 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="description" content="A web editor for the shapes of Material 3 Expressive." />
+    <meta name="description" content="Pick, adjust and export the shapes of Material 3 Expressive." />
     <title>Material Shape Studio</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <header>
+      <h1>Material Shape Studio</h1>
+      <span class="tag">early version</span>
+      <span class="spacer"></span>
+      <button id="undo" title="Undo (Ctrl+Z)">Undo</button>
+      <button id="redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+    </header>
+    <main>
+      <section class="col-picker card">
+        <h2>1 · Pick a Material shape</h2>
+        <div class="picker" id="picker"></div>
+        <p class="caption" id="caption"></p>
+      </section>
+      <section class="col-center">
+        <div class="stage">
+          <svg class="preview" id="preview" role="group" aria-label="Shape preview"></svg>
+          <p class="hint" id="stage-hint">Drag a dot to reshape. The whole pattern follows, because each dot repeats around the centre.</p>
+          <p class="error" id="error" role="status" hidden></p>
+          <div class="in-use" id="in-use"></div>
+        </div>
+        <div class="card">
+          <h2>2 · Adjust <span class="name" id="shape-name"></span><button class="small" id="reset" hidden>Reset</button></h2>
+          <div id="controls"></div>
+          <label class="colour"><input type="color" id="colour" value="#6750a4" /> Colour <span class="why">used in the preview and the exports</span></label>
+          <details id="more">
+            <summary>More options</summary>
+            <div id="more-controls"></div>
+          </details>
+        </div>
+      </section>
+      <section class="col-export card">
+        <h2>3 · Export</h2>
+        <div class="tabs" role="tablist" id="tabs">
+          <button role="tab" data-tab="compose" aria-selected="true">Compose</button>
+          <button role="tab" data-tab="svg" aria-selected="false">SVG</button>
+          <button role="tab" data-tab="png" aria-selected="false">PNG</button>
+          <button role="tab" data-tab="css" aria-selected="false">CSS</button>
+        </div>
+        <p class="about" id="export-about"></p>
+        <div class="buttons" id="export-buttons"></div>
+        <pre id="export-code" aria-label="Exported code"></pre>
+      </section>
+    </main>
+    <footer>
+      Shapes come from Google's graphics-shapes <span id="engine-version"></span>, the library behind Jetpack Compose's
+      Material shapes. An independent open-source project, not affiliated with or endorsed by Google. Material Design is a
+      trademark of Google LLC. <a href="https://github.com/kartollikaa/material-shape-studio">Source on GitHub</a>
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

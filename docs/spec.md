@@ -8,19 +8,20 @@ What the app does and how its parts fit. The reasoning behind the architecture i
 
 A static web app for designers and developers working with Material 3 Expressive shapes:
 
-1. **Browse** the 35-shape `MaterialShapes` catalogue, at any size, light and dark, filled or outlined.
+1. **Browse** the 35-shape `MaterialShapes` catalogue, light and dark, and start from any of them.
 2. **Create** a shape with Material's own vocabulary: the library builders, and a custom polygon
    made of one slice of vertices repeated around the centre, optionally mirrored, with a radius and a
    smoothing per corner.
 3. **Imitate** a shape from an SVG path: detect its features, retype a corner the detector misread,
    keep the result as a `FeatureSerializer` string.
-4. **Morph** between any two shapes and scrub the progress.
+4. **Morph** the shape when it is pressed, the way Material's components do, and export the Compose
+   `Morph` for it.
 5. **Export** the shape as code for platforms with a port of `androidx.graphics.shapes`, and as SVG,
    PNG and CSS for those without; share it as a URL that carries the whole document.
 
 Out of scope: raster tracing, component or theme building, accounts, telemetry, any server.
-Recorded as a later idea, not v1: in-context prototyping, the shape applied to an avatar, a button,
-a FAB and a loading indicator that morphs to a circle.
+The studio shows the shape in use on a photo, an icon button and an avatar. Recorded as a later
+idea, not v1: a FAB and a loading indicator that morphs to a circle.
 The project is independent of Google; "Material Design" is Google's trademark and the site says so.
 
 ## 2. Architecture
@@ -113,9 +114,10 @@ Rules:
   coordinates `bounds` and `normalize` differ from the true extent; the engine keeps that for them, as
   Compose does, and a fixture pins it. `fillSquare` is the engine's own transform, so it measures the
   true extent and always reaches the unit square.
-- Transforms apply in order after the shape is built. New documents created in the editor start with
-  `[normalize]`; the export panel warns when the final bounds leave the unit square, because Compose's
-  `toShape()` scales the unit square to the component size.
+- Transforms apply in order after the shape is built. Documents in the studio start from a catalogue
+  shape and keep its closing `normalize`, so their bounds stay in the unit square. Later, when a
+  document can arrive from a link, the export panel warns when its final bounds leave the unit
+  square, because Compose's `toShape()` scales the unit square to the component size.
 - Validation is in the engine (common Kotlin) and rejects: fewer than three vertices, a rounding
   array of the wrong length, `smoothing` outside 0..1, `repeat.count < 1`, a `startAngle` not last,
   an unknown `kind`, `name` or `type`, a `v` other than 1. The message names the field.
@@ -129,10 +131,10 @@ constructor. Any other document, including an edited catalogue shape, exports as
 
 ### URL codec
 
-The hash holds a query string: `#doc=<payload>&morph=<payload>&view=catalogue|editor|import|morph`.
+The hash holds a query string: `#doc=<payload>`.
 A payload is `base64url(deflate-raw(JSON))`, produced with the browser's `CompressionStream`, no
-dependency. A hash the codec cannot decode opens the catalogue with a dismissable notice, never a
-blank page. The codec is a pure module with its own tests; nothing else touches `location.hash`.
+dependency. A hash the codec cannot decode opens the default shape with a dismissable notice, never
+a blank page. The codec is a pure module with its own tests; nothing else touches `location.hash`.
 
 ## 4. Engine façade
 
@@ -178,47 +180,31 @@ Multiplatform desktop artifact, so an upstream change fails the build. Names are
 
 ## 6. User interface
 
-One page, four views selected by `view=` in the URL, with a persistent preview and export panel.
+One page in three steps, framework-free TypeScript over the page's own markup in `web/index.html`.
+Every piece exists because one of the three jobs needs it: pick a shape, adjust it, take it into an
+app. It follows the system's light or dark setting.
 
-- **Preview** (every view): the shape rendered as an SVG path in a square viewport the way Compose's
-  `toShape()` draws it: the unit square scaled to the viewport, then centred by the shape's bounds;
-  controls for size, fill or outline, light or dark; the same component draws the
-  catalogue thumbnails and the morph frame.
-- **Catalogue**: a grid of the 35 shapes; click opens one in the editor as its own document; a
-  second click (or a "morph to" action) sets it as the morph target.
-- **Editor**: a kind selector and, for every kind, two views of the same document fields: controls
-  in a side panel and handles on the canvas. Every change writes the document, which rebuilds the
-  preview and the URL; values are rounded to three decimals on write, as the catalogue's data is.
-  - *Controls*: every numeric field has a slider with the library's range and a numeric input, and
-    dragging the input's label scrubs the value. Rounding has a master control for all corners, a
-    per-corner override list, a link toggle, "copy to all corners" and presets (sharp, soft,
-    squircle). Repeat count and mirror for `polygon`; a transforms list that can be reordered.
-  - *Canvas*: slice vertices drag, and the repeated and mirrored copies are drawn ghosted so the
-    slice is obvious. Each corner has a radius handle on its bisector and a smoothing handle;
-    hovering shows the values. Clicking an edge midpoint inserts a vertex, Delete removes the
-    selected one, arrows nudge and Shift makes steps ten times larger. Builder kinds expose handles
-    for their fields: a star's outer and inner radius points, a pill's width and height, a
-    rectangle's corner radius. A rotation ring writes a `rotate` transform. Grid and axis snapping
-    can be toggled and Alt bypasses them.
-  - *Starting points*: any catalogue shape opens with Material's own parameters; "Reset" restores
-    them and "Compare" overlays the original outline on the preview.
-  - *Variations*: a strip of six documents that perturb the current numeric fields within their
-    ranges, regenerated on demand; clicking one adopts it.
-  - *History*: undo and redo over the document, with the URL following the current state, and a
-    shortcuts panel listing every key.
-  - A validator error is shown next to the control that caused it, never as a blank preview.
-- **Import**: a text box for an SVG `d` attribute; the detected features are listed and drawn with a
-  colour per type; a feature's type can be changed; the result is a `features` document whose
-  serialised string is shown and copyable.
-- **Morph**: the current document and a target document, a scrubber and a play button, the frame
-  drawn from `morphCubics`; the target is chosen from the catalogue or pasted as a share URL.
-- **Export panel**: a target selector, the generated code with a copy button, and per-target
-  options (size for SVG and CSS). Present in every view.
+- **1 · Pick a Material shape**: the 35 catalogue shapes as thumbnails; hovering names one, and
+  picking one replaces the current shape.
+- **Preview**: the shape at full size in the chosen colour. Polygon shapes show their slice's dots;
+  dragging a dot moves that vertex, and the repeated pattern follows. Arrow keys nudge the selected
+  dot, Shift for larger steps. Below it, **In use** shows the shape as a photo, an icon button and an
+  avatar.
+- **2 · Adjust**: only the sliders that change the selected shape, each but Rotate with a one-line
+  reason: Repeats for patterns that repeat, Points and Depth for stars, Sides for n-gons, Proportion
+  for rectangles, Squash for circles, Roundness, and Rotate where it shows. Roundness scales every
+  corner of Material's recipe together; sharp shapes start at 0%. Then Colour, used in the preview
+  and the exports. **Reset** appears once the shape differs from Material's. **More options**,
+  closed by default, holds Softness, the roundness of the selected dot, and adding or removing a
+  dot; removal never leaves fewer than three corners or changes a one-off shape's repeats.
+- **3 · Export**: tabs for Compose, SVG, PNG and CSS (§7), each with a one-line description, its
+  copy or download buttons, and the code where there is code.
+- **Undo and Redo** in the header, and Ctrl+Z / Ctrl+Shift+Z, step through every edit.
 
-State is one `ShapeDocument` (plus a morph target) in a React reducer with a past, present and
-future stack for undo and redo; the URL codec subscribes to the present with a short debounce. No
-global store library. Every control is a labelled native input, so the editor works without a mouse;
-the canvas handles are a second way in, never the only one.
+A document that cannot be built keeps the last good preview and says why under it, and an export
+that fails says so on its button. The studio works without a mouse: every control is a labelled
+native input that keeps focus while it changes the shape, Tab reaches each dot and selects it, and
+the arrow keys move between export tabs. Dragging dots is a second way in.
 
 ## 7. Exporters
 
@@ -259,8 +245,9 @@ within 1e-4 rather than exactly; a compiled check proves that bound for every ca
   longer matches the exporter. It covers the expressions, not the Compose wrapper around them, which
   needs Compose on the classpath.
 - **Other exporters**: snapshot tests; Dart gets a `dart test` job once its package is chosen.
-- **UI**: vitest for the codec, reducer and exporters; a Playwright smoke test against the built
-  site that opens a catalogue shape, moves a slider and copies the Kotlin output.
+- **UI**: vitest for the exporters, the editing model, the page in jsdom and the URL codec; a
+  Playwright smoke test against the built site that opens a catalogue shape, moves a slider and
+  copies the Kotlin output.
 - **Positive controls**: every parity test is shown to fail once by breaking a vendored constant, and
   the evidence goes into that slice's PR body.
 
