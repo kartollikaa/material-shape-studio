@@ -23,9 +23,9 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 | S3a | `feature/s3a-exporters-catalogue` | The 35 Material shapes generated from Compose's source, and the Compose, SVG and CSS exporters, all tested | safe | ~600 | S1b | in-review |
 | S3b | `feature/s3b-studio-editor` | The studio's editing model: per-shape controls, dots, undo and redo, tested on every catalogue shape | safe | ~420 | S3a | in-review |
 | S3c | `feature/s3c-studio-page` | The approved prototype as the site: pick, adjust, see it in use, export; React leaves | safe | ~650 | S3b | planned |
-| S4 | `feature/s4-editor-core` | Superseded by S3b: the owner chose the prototype's simpler editor | — | — | — | dropped |
-| S4b | `feature/s4b-direct-manipulation` | Superseded by S3b: dots on the shape cover direct editing; handles, ring and snapping are not wanted | — | — | — | dropped |
-| S4c | `feature/s4c-editor-conveniences` | Superseded by S3b: undo, reset and per-dot roundness ship there; the rest is not wanted | — | — | — | dropped |
+| S4 | `feature/s4-editor-core` | Superseded by S3b and S3c: the owner chose the prototype's simpler editor | — | — | — | dropped |
+| S4b | `feature/s4b-direct-manipulation` | Superseded by S3b and S3c: dots on the shape cover direct editing; handles, ring and snapping are not wanted | — | — | — | dropped |
+| S4c | `feature/s4c-editor-conveniences` | Superseded by S3b and S3c: undo, reset and per-dot roundness ship there; the rest is not wanted | — | — | — | dropped |
 | S5 | `feature/s5-proof-and-share` | A Playwright smoke test in CI, and share links that carry the document in the URL | safe | ~600 | S3b | planned |
 | S6 | `feature/s6-press-animation` | The shape morphs when pressed in the "In use" preview, and Compose gets the `Morph` code | safe | ~400 | S3b | planned |
 | S7 | `feature/s7-import` | Paste an SVG path, see and retype its features, keep it as a `features` document and export it | safe | ~600 | S5 | planned |
