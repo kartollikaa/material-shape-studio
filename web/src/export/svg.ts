@@ -1,4 +1,4 @@
-import { roundTo } from "./kotlin";
+import { roundTo } from "./numbers";
 
 export function svgPath(cubics: ArrayLike<number>, scale = 100, digits = 2): string {
   const p = (v: number) => roundTo(v * scale, digits);

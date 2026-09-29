@@ -1,13 +1,8 @@
 import type { Rounding, ShapeDocument, Transform } from "../document";
+import { roundTo } from "./numbers";
 import { polygonCorners } from "./repeat";
 
 export const KOTLIN_DIGITS = 5;
-
-export function roundTo(x: number, digits: number): number {
-  const p = 10 ** digits;
-  const v = Math.round(x * p) / p;
-  return Object.is(v, -0) ? 0 : v;
-}
 
 const kt = (x: number, digits = KOTLIN_DIGITS) => `${roundTo(x, digits)}f`;
 
@@ -28,6 +23,16 @@ function linear(terms: [number, string][]): string {
   return parts.length ? parts.join(" ") : "0f";
 }
 
+const offset = (name: string, by: number) => {
+  const v = roundTo(by, KOTLIN_DIGITS);
+  return v === 0 ? name : `${name} ${v < 0 ? "-" : "+"} ${kt(Math.abs(v))}`;
+};
+
+const isIdentity = (t: Transform) =>
+  (t.type === "rotate" && roundTo(t.degrees % 360, 9) === 0) ||
+  (t.type === "scale" && t.x === 1 && t.y === 1) ||
+  (t.type === "translate" && t.x === 0 && t.y === 0);
+
 function transformCall(t: Transform): string {
   switch (t.type) {
     case "normalize":
@@ -35,7 +40,7 @@ function transformCall(t: Transform): string {
     case "scale":
       return `.transformed { x, y -> TransformResult(${linear([[t.x, "x"]])}, ${linear([[t.y, "y"]])}) }`;
     case "translate":
-      return `.transformed { x, y -> TransformResult(x + ${kt(t.x)}, y + ${kt(t.y)}) }`;
+      return `.transformed { x, y -> TransformResult(${offset("x", t.x)}, ${offset("y", t.y)}) }`;
     case "rotate": {
       const a = (t.degrees * Math.PI) / 180;
       const [c, s] = [Math.cos(a), Math.sin(a)];
@@ -133,18 +138,23 @@ export function kotlinExpression(doc: ShapeDocument): { code: string; imports: S
       call = "RoundedPolygon";
       const { corners, center: c } = polygonCorners(s);
       args.push(`vertices = floatArrayOf(\n${corners.map(({ point: [x, y] }) => `        ${kt(x)}, ${kt(y)},`).join("\n")}\n    )`);
-      args.push(`perVertexRounding = ${cornerList(corners.map((e) => e.rounding))}`);
+      const roundings = corners.map((e) => corner(e.rounding));
+      if (roundings.every((r) => r === roundings[0])) {
+        if (roundings[0] !== "CornerRounding.Unrounded") rounding("rounding", corners[0].rounding);
+      } else {
+        args.push(`perVertexRounding = ${cornerList(corners.map((e) => e.rounding))}`);
+      }
       center(c);
       break;
     }
     case "features":
       call = "RoundedPolygon";
       imports.add("androidx.graphics.shapes.FeatureSerializer");
-      args.push(`features = FeatureSerializer.parse("${s.serialized}")`);
+      args.push(`features = FeatureSerializer.parse("${s.serialized.replace(/[\\"$]/g, (ch) => `\\${ch}`)}")`);
       center(s.center);
       break;
   }
-  const transforms = doc.transforms ?? [];
+  const transforms = (doc.transforms ?? []).filter((t) => !isIdentity(t));
   if (transforms.some((t) => t.type !== "normalize")) imports.add("androidx.graphics.shapes.TransformResult");
   const head = args.length ? `${call}(\n${args.map((a) => `    ${a},`).join("\n")}\n)` : `${call}()`;
   return { code: head + transforms.map(transformCall).join(""), imports };
@@ -163,8 +173,14 @@ const COMPOSE_IMPORTS = [
   "androidx.compose.ui.unit.dp",
 ];
 
+const argbOf = (colour: string) => {
+  const hex = colour.replace("#", "");
+  const full = hex.length === 3 ? [...hex].map((c) => c + c).join("") : hex;
+  return `0xFF${full.toUpperCase()}`;
+};
+
 export function kotlinFile(doc: ShapeDocument, options: { catalogueName: string | null; colour: string }): string {
-  const argb = `0xFF${options.colour.replace("#", "").toUpperCase()}`;
+  const argb = argbOf(options.colour);
   const imports = new Set(COMPOSE_IMPORTS);
   let declaration = "";
   let shape: string;
@@ -177,7 +193,8 @@ export function kotlinFile(doc: ShapeDocument, options: { catalogueName: string 
     declaration = `private val MyShape = ${expression.code}\n\n`;
     shape = "MyShape";
   }
-  return `${[...imports].sort().map((i) => `import ${i}`).join("\n")}
+  return `// Needs Compose Material 3 with the Expressive API (MaterialShapes and toShape)${options.catalogueName ? "" : " and androidx.graphics:graphics-shapes"}.
+${[...imports].sort().map((i) => `import ${i}`).join("\n")}
 
 ${declaration}@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

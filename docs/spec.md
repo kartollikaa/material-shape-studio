@@ -38,11 +38,12 @@ engine/                 Gradle, Kotlin Multiplatform: jvm() + js()
   fixtures/             committed golden cubics, one JSON per document
 packages/engine/        npm package @material-shape-studio/engine; dist/ is copied from the
                         Kotlin/JS build (ES module + .d.mts), never committed
-web/                    Vite + React + TypeScript; workspace member depending on the package above
-  src/document          types, defaults, URL codec
-  src/engine            typed wrapper over the façade
-  src/exporters         one module per target, pure functions document -> text
-  src/ui                screens and components
+web/                    Vite + TypeScript, no UI framework; workspace member depending on the package above
+  scripts/              generate-catalogue.mjs: the 35 MaterialShapes from Compose's source
+  src/document.ts       the shape document types
+  src/catalogue/        the generated catalogue data
+  src/export/           one module per target, pure functions from a document or its cubics to text
+  src/studio/           editor state and controls (editor.ts), dot geometry, and the page (page.ts)
 .github/workflows       ci.yml (every PR), deploy.yml (main -> GitHub Pages)
 ```
 
@@ -124,7 +125,7 @@ Rules:
 A document *is* a catalogue entry when its `shape.kind` is `catalogue`, or when the engine's
 `matchCatalogue` finds a vendored entry whose cubics equal the document's within 1e-4 after the
 document's own transforms. The Kotlin exporter then emits `MaterialShapes.Name` instead of a
-constructor. A catalogue document with extra transforms emits `MaterialShapes.Name.transformed { }`.
+constructor. Any other document, including an edited catalogue shape, exports as a constructor.
 
 ### URL codec
 
@@ -222,13 +223,13 @@ the canvas handles are a second way in, never the only one.
 ## 7. Exporters
 
 Exporters are pure functions in `web/src/export/`, one module per target, taking a document or its
-normalized cubics and returning text. The studio offers four targets today:
+normalized cubics and returning text:
 
 | Target | Emits |
 |---|---|
-| Compose | A paste-ready Kotlin file whose `ShapedBox` clips a box to the shape. An untouched catalogue shape is `MaterialShapes.Name`; anything else is a `private val MyShape` built with the `graphics-shapes` constructor for its kind, then `.transformed { x, y -> TransformResult(...) }` for each rotation or scale and `.normalized()`. A repeated polygon is emitted with its expanded vertices, since no platform exposes Material's slice helper. |
+| Compose | A paste-ready Kotlin file whose `ShapedBox` clips a box to the shape. An untouched catalogue shape is `MaterialShapes.Name`; anything else is a `private val MyShape` built with the `graphics-shapes` constructor for its kind, then `.transformed { x, y -> TransformResult(...) }` for each rotation or scale and `.normalized()`. A repeated polygon is emitted with its expanded vertices, since no platform exposes Material's slice helper; one `rounding` replaces the per-vertex list when every corner is alike, and transforms that change nothing are left out. The file's first line says it needs Compose Material 3 with the Expressive API, which `MaterialShapes` and `toShape()` belong to. |
 | SVG | `<svg viewBox="0 0 100 100">` with one `<path>` in the chosen colour |
-| PNG | Not an exporter: the page fills the path on a 1024 × 1024 canvas with a transparent background |
+| PNG | Not an exporter: the studio fills the path on a 1024 × 1024 canvas with a transparent background |
 | CSS | One `clip-path: shape(...)` in percentages, so the clip follows the element's size |
 
 `fillSquare` and `startAngle` have no Compose export yet and raise an error; the studio never
@@ -251,9 +252,12 @@ within 1e-4 rather than exactly; a compiled check proves that bound for every ca
   float32, so a feature whose length or cut sits within float rounding of 1e-4 can be dropped on one
   target and kept on the other. Fixtures therefore stay clear of such degenerate edges.
 - **Catalogue sync**: the JVM test of section 5.
-- **Kotlin round trip**: the Compose export for every catalogue shape and a set of edited ones is
-  compiled against `graphics-shapes` on the JVM and must reproduce the engine's cubics within 1e-4.
-  S3a ran it as a documented command; S5 moves it into CI.
+- **Kotlin round trip**: `npm run round-trip -w web` writes the Compose expression for every
+  catalogue shape, every exportable engine fixture and a set of edited shapes into
+  `engine/src/jvmTest/.../export/ExportCases.kt`. The JVM test compiles them against `graphics-shapes`
+  and requires the engine's cubics within 1e-4, and a web test fails when the committed file no
+  longer matches the exporter. It covers the expressions, not the Compose wrapper around them, which
+  needs Compose on the classpath.
 - **Other exporters**: snapshot tests; Dart gets a `dart test` job once its package is chosen.
 - **UI**: vitest for the codec, reducer and exporters; a Playwright smoke test against the built
   site that opens a catalogue shape, moves a slider and copies the Kotlin output.
