@@ -21,7 +21,8 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 | S1b | `feature/s1b-engine-document` | Every remaining shape kind and transform, and morph handles, through the same pipeline | safe | ~920, justified | S1 | merged |
 | S2 | `feature/s2-catalogue` | The 35 catalogue shapes as vendored documents, proven equal to Compose's `MaterialShapes` | safe | ~500 | S1b | planned |
 | S3a | `feature/s3a-exporters-catalogue` | The 35 Material shapes generated from Compose's source, and the Compose, SVG and CSS exporters, all tested | safe | ~600 | S1b | in-review |
-| S3b | `feature/s3b-studio` | The approved prototype as the site: pick, adjust with dots and a few plain sliders, see it in use, export | safe | ~900, justified | S3a | planned |
+| S3b | `feature/s3b-studio-editor` | The studio's editing model: per-shape controls, dots, undo and redo, tested on every catalogue shape | safe | ~420 | S3a | in-review |
+| S3c | `feature/s3c-studio-page` | The approved prototype as the site: pick, adjust, see it in use, export; React leaves | safe | ~650 | S3b | planned |
 | S4 | `feature/s4-editor-core` | Superseded by S3b: the owner chose the prototype's simpler editor | — | — | — | dropped |
 | S4b | `feature/s4b-direct-manipulation` | Superseded by S3b: dots on the shape cover direct editing; handles, ring and snapping are not wanted | — | — | — | dropped |
 | S4c | `feature/s4c-editor-conveniences` | Superseded by S3b: undo, reset and per-dot roundness ship there; the rest is not wanted | — | — | — | dropped |
@@ -113,12 +114,21 @@ named re-cut or a size justification in their details; the diff is sized before 
 - **Ships safely because:** nothing on the site uses it yet.
 - **Cleanup owed:** none.
 
-### S3b — `feature/s3b-studio`
-- **In scope:** the approved prototype as the site, in framework-free TypeScript: the picker of 35
-  shapes, the preview with draggable dots, the adjust panel with only the sliders that change the
-  selected shape, colour, reset, undo and redo, "More options", the "In use" row, and the export panel
-  with Compose, SVG, PNG and CSS. React leaves the project. Tests for the editing logic and a DOM test
-  of the page. Spec §6 and the README describe the studio.
+### S3b — `feature/s3b-studio-editor`
+- **In scope:** `web/src/studio/editor.ts` and `geometry.ts`: the editing state for a picked shape,
+  the main and "More options" controls per shape kind, adding, removing and moving dots, reset
+  detection, undo and redo, and the dot geometry through rotations and scales; tests that drive
+  every control of every catalogue shape to both ends.
+- **Out of scope:** the page (S3c).
+- **Ships safely because:** nothing on the site uses it yet.
+- **Cleanup owed:** none.
+
+### S3c — `feature/s3c-studio-page`
+- **In scope:** the approved prototype as the site, in framework-free TypeScript over the editing
+  model: the picker of 35 shapes, the preview with draggable dots, the adjust panel, colour, reset,
+  undo and redo, "More options", the "In use" row, and the export panel with Compose, SVG, PNG and
+  CSS. React leaves the project. A DOM test of the page. Spec §2 and §6 and the README describe the
+  studio.
 - **Out of scope:** share links and the Playwright test (S5); the press animation (S6).
 - **Ships safely because:** it replaces the placeholder with a complete tool.
 - **Cleanup owed:** none.
@@ -220,3 +230,5 @@ simpler one, which S3b ships.
   UI stays framework-free TypeScript, as the prototype is. The 35 shapes ship as data generated from
   Compose's source at a pinned commit until S2 vendors them into the engine with the sync test.
   The engine hardening deferred to S3 moves to S5, where documents first arrive from a link.
+- 2026-09-29: S3b measured about 1,070 reviewable lines, over the cap. Split into S3b, the editing
+  model, and S3c, the page with React's removal and the docs.
