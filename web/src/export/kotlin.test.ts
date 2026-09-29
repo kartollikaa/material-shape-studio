@@ -10,6 +10,14 @@ const edited = (name: string, change: (doc: ShapeDocument) => void): ShapeDocume
   return doc;
 };
 const importsOf = (file: string) => file.split("\n").filter((l) => l.startsWith("import ")).map((l) => l.slice(7));
+const SHAPES = "androidx.graphics.shapes.";
+const shapesImports = (file: string) => importsOf(file).filter((i) => i.startsWith(SHAPES)).map((i) => i.slice(SHAPES.length)).sort();
+function shapesSymbolsUsed(file: string): string[] {
+  const body = file.split("\n").filter((l) => !l.startsWith("import ")).join("\n");
+  const types = ["RoundedPolygon", "CornerRounding", "TransformResult", "FeatureSerializer"].filter((t) => new RegExp(`\\b${t}\\b`).test(body));
+  const builders = ["star", "rectangle", "circle", "pill", "pillStar"].filter((b) => body.includes(`RoundedPolygon.${b}(`));
+  return [...types, ...builders].sort();
+}
 
 describe("the Compose export", () => {
   it("uses MaterialShapes for an untouched catalogue shape", () => {
@@ -38,6 +46,29 @@ describe("the Compose export", () => {
       const file = kotlinFile(edited(name, change), { catalogueName: null, colour: PURPLE });
       expect(file).toContain(call);
       expect(importsOf(file)).toContain(symbol);
+    }
+  });
+
+  it("declares MyShape with each kind's constructor and imports every graphics-shapes symbol it uses", () => {
+    const cases: [string, (d: ShapeDocument) => void, string, string[]][] = [
+      ["Cookie4Sided", (d) => { if (d.shape.kind === "polygon") d.shape.repeat!.count = 6; }, "RoundedPolygon(\n    vertices = floatArrayOf(", ["CornerRounding", "RoundedPolygon"]],
+      ["Sunny", (d) => { if (d.shape.kind === "star") d.shape.verticesPerRadius = 11; }, "RoundedPolygon.star(", ["CornerRounding", "RoundedPolygon", "star"]],
+      ["Triangle", (d) => { if (d.shape.kind === "ngon") d.shape.vertices = 5; }, "RoundedPolygon(\n    numVertices = 5,", ["CornerRounding", "RoundedPolygon", "TransformResult"]],
+      ["Square", (d) => { if (d.shape.kind === "rectangle") d.shape.width = 2; }, "RoundedPolygon.rectangle(", ["CornerRounding", "RoundedPolygon", "rectangle"]],
+      ["Circle", (d) => { d.transforms = [{ type: "scale", x: 1, y: 0.5 }, { type: "normalize" }]; }, "RoundedPolygon.circle(", ["RoundedPolygon", "TransformResult", "circle"]],
+    ];
+    for (const [name, change, constructor, symbols] of cases) {
+      const file = kotlinFile(edited(name, change), { catalogueName: null, colour: PURPLE });
+      expect(file, name).toContain(`private val MyShape = ${constructor}`);
+      expect(shapesImports(file), name).toEqual(symbols);
+      expect(shapesSymbolsUsed(file), name).toEqual(symbols);
+    }
+  });
+
+  it("imports exactly the graphics-shapes symbols each catalogue shape's constructor uses", () => {
+    for (const name of CATALOGUE_NAMES) {
+      const file = kotlinFile(CATALOGUE[name], { catalogueName: null, colour: PURPLE });
+      expect(shapesImports(file), name).toEqual(shapesSymbolsUsed(file));
     }
   });
 
