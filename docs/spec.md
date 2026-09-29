@@ -19,8 +19,8 @@ A static web app for designers and developers working with Material 3 Expressive
    PNG and CSS for those without; share it as a URL that carries the whole document.
 
 Out of scope: raster tracing, component or theme building, accounts, telemetry, any server.
-Recorded as a later idea, not v1: in-context prototyping, the shape applied to an avatar, a button,
-a FAB and a loading indicator that morphs to a circle.
+The studio shows the shape in use on a photo, an icon button and an avatar. Recorded as a later
+idea, not v1: a FAB and a loading indicator that morphs to a circle.
 The project is independent of Google; "Material Design" is Google's trademark and the site says so.
 
 ## 2. Architecture
@@ -129,10 +129,10 @@ constructor. Any other document, including an edited catalogue shape, exports as
 
 ### URL codec
 
-The hash holds a query string: `#doc=<payload>&morph=<payload>&view=catalogue|editor|import|morph`.
+The hash holds a query string: `#doc=<payload>`.
 A payload is `base64url(deflate-raw(JSON))`, produced with the browser's `CompressionStream`, no
-dependency. A hash the codec cannot decode opens the catalogue with a dismissable notice, never a
-blank page. The codec is a pure module with its own tests; nothing else touches `location.hash`.
+dependency. A hash the codec cannot decode opens the default shape with a dismissable notice, never
+a blank page. The codec is a pure module with its own tests; nothing else touches `location.hash`.
 
 ## 4. Engine façade
 
@@ -199,8 +199,10 @@ app. It follows the system's light or dark setting.
   copy or download buttons, and the code where there is code.
 - **Undo and Redo** in the header, and Ctrl+Z / Ctrl+Shift+Z, step through every edit.
 
-A document that cannot be built keeps the last good preview and says why under it. Every control is
-a labelled native input, so the studio works without a mouse; dragging dots is a second way in.
+A document that cannot be built keeps the last good preview and says why under it, and an export
+that fails says so on its button. The studio works without a mouse: every control is a labelled
+native input that keeps focus while it changes the shape, Tab reaches each dot and selects it, and
+the arrow keys move between export tabs. Dragging dots is a second way in.
 
 ## 7. Exporters
 
@@ -241,8 +243,9 @@ within 1e-4 rather than exactly; a compiled check proves that bound for every ca
   longer matches the exporter. It covers the expressions, not the Compose wrapper around them, which
   needs Compose on the classpath.
 - **Other exporters**: snapshot tests; Dart gets a `dart test` job once its package is chosen.
-- **UI**: vitest for the codec, reducer and exporters; a Playwright smoke test against the built
-  site that opens a catalogue shape, moves a slider and copies the Kotlin output.
+- **UI**: vitest for the exporters, the editing model, the page in jsdom and the URL codec; a
+  Playwright smoke test against the built site that opens a catalogue shape, moves a slider and
+  copies the Kotlin output.
 - **Positive controls**: every parity test is shown to fail once by breaking a vendored constant, and
   the evidence goes into that slice's PR body.
 

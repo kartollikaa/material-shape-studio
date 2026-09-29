@@ -1,6 +1,6 @@
 import { build, buildCubics, version } from "@material-shape-studio/engine";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
-import type { ShapeDocument } from "../document";
+import type { ShapeDocument, Transform } from "../document";
 import { cssRule } from "../export/css";
 import { kotlinFile } from "../export/kotlin";
 import { svgFile, svgPath } from "../export/svg";
@@ -29,6 +29,7 @@ export function mountStudio(page: Document) {
   const html = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, unknown> = {}) =>
     Object.assign(page.createElement(tag), props) as HTMLElementTagNameMap[K];
 
+  // Controls close over the state they were built from, so every reassignment must be followed by render().
   let state: EditorState = pick("Cookie4Sided");
   let colour = "#6750a4";
   let tab: Tab = "compose";
@@ -39,6 +40,12 @@ export function mountStudio(page: Document) {
   const remember = () => history.remember(snapshot(state));
   const buildDoc = (doc: ShapeDocument): Built => JSON.parse(build(JSON.stringify(doc)));
   const pathOf = (cubics: ArrayLike<number>) => svgPath(cubics, 1, 4);
+  const refill = (container: Element, fill: () => void) => {
+    const focused = container.contains(page.activeElement) ? page.activeElement?.getAttribute("data-focus") : null;
+    container.replaceChildren();
+    fill();
+    if (focused) Array.from(container.querySelectorAll<HTMLElement | SVGElement>("[data-focus]")).find((e) => e.dataset.focus === focused)?.focus();
+  };
   const normalizedCubics = () => {
     try {
       return buildCubics(JSON.stringify(state.doc));
@@ -78,18 +85,27 @@ export function mountStudio(page: Document) {
     const top = html("div", { className: "top" });
     const label = html("label", { htmlFor: id, textContent: c.label });
     const out = html("output");
+    out.setAttribute("for", id);
     top.append(label, out);
     wrap.appendChild(top);
-    if (c.why) wrap.appendChild(html("p", { className: "why", textContent: c.why }));
     const range = html("input", { type: "range", id, min: String(c.min), max: String(c.max), step: String(c.step) });
+    range.dataset.focus = `control:${c.label}`;
+    if (c.why) {
+      wrap.appendChild(html("p", { className: "why", id: `${id}-why`, textContent: c.why }));
+      range.setAttribute("aria-describedby", `${id}-why`);
+    }
+    const show = (v: number) => {
+      out.textContent = c.show(v);
+      range.setAttribute("aria-valuetext", c.show(v));
+    };
     range.value = String(c.get());
-    out.textContent = c.show(Number(range.value));
+    show(Number(range.value));
     let started = false;
     range.addEventListener("input", () => {
       if (!started) { remember(); started = true; }
       const v = c.step >= 1 ? Math.round(Number(range.value)) : round3(Number(range.value));
       c.set(v);
-      out.textContent = c.show(v);
+      show(v);
       renderLive();
     });
     range.addEventListener("change", () => { started = false; render(); });
@@ -99,6 +115,7 @@ export function mountStudio(page: Document) {
 
   function actionButton(container: HTMLElement, label: string, action: () => void, disabled = false) {
     const b = html("button", { textContent: label, disabled });
+    b.dataset.focus = `action:${label}`;
     b.addEventListener("click", () => { remember(); action(); render(); });
     container.appendChild(b);
   }
@@ -107,46 +124,58 @@ export function mountStudio(page: Document) {
     $("shape-name").textContent = `· ${displayName(state.name)}${isEdited(state) ? " (edited)" : ""}`;
     $("reset").hidden = !isEdited(state);
     const main = $("controls");
-    main.replaceChildren();
-    mainControls(state).forEach((c) => controlRow(main, c));
+    refill(main, () => mainControls(state).forEach((c) => controlRow(main, c)));
     const more = $("more-controls");
-    more.replaceChildren();
     const extra = moreControls(state);
-    extra.forEach((c) => controlRow(more, c));
     const polygon = state.doc.shape.kind === "polygon";
-    if (polygon) {
+    refill(more, () => {
+      extra.forEach((c) => controlRow(more, c));
+      if (!polygon) return;
       const buttons = html("div", { className: "buttons" });
       actionButton(buttons, "Add a dot", () => addDot(state));
       actionButton(buttons, "Remove the selected dot", () => removeDot(state), !canRemoveDot(state));
       more.appendChild(buttons);
-    }
+    });
     $("more").hidden = !extra.length && !polygon;
   }
 
-  function renderShape() {
-    const preview = $("preview") as unknown as SVGSVGElement;
-    preview.replaceChildren();
-    const transforms = viewTransforms(state.doc);
-    let built: Built | null;
+  function buildPreview(transforms: Transform[]): Built | null {
     try {
-      built = buildDoc({ ...state.doc, transforms });
-      lastGood = built;
+      lastGood = buildDoc({ ...state.doc, transforms });
       $("error").hidden = true;
     } catch (e) {
       $("error").hidden = false;
       $("error").textContent = `That combination can't be drawn: ${(e as Error).message.replace(/^[\w.[\]]+: /, "")}`;
-      built = lastGood;
     }
-    if (!built) return;
+    return lastGood;
+  }
+
+  const select = (index: number) => {
+    if (state.selected === index) return;
+    state.selected = index;
+    render();
+  };
+
+  function renderShape() {
+    const preview = $("preview") as unknown as SVGSVGElement;
+    const transforms = viewTransforms(state.doc);
+    const built = buildPreview(transforms);
     const shape = state.doc.shape;
-    const dots = shape.kind === "polygon" ? shape.vertices.map((p) => forward(p, transforms)) : [];
-    const box = dragging && frozenBox ? frozenBox : squareAround(built.bounds, dots);
-    frozenBox = box;
-    preview.setAttribute("viewBox", box.join(" "));
-    svg("path", { d: pathOf(built.cubics), fill: colour }, preview);
-    dots.forEach(([x, y], i) => {
-      const dot = svg("circle", { cx: x, cy: y, r: box[2] * 0.02, class: `dot${i === state.selected ? " selected" : ""}`, role: "button", "aria-label": `Dot ${i + 1}` }, preview);
-      dot.addEventListener("pointerdown", (e) => startDrag(e as PointerEvent, i));
+    const dots = built && shape.kind === "polygon" ? shape.vertices.map((p) => forward(p, transforms)) : [];
+    refill(preview, () => {
+      if (!built) return;
+      const box = dragging && frozenBox ? frozenBox : squareAround(built.bounds, dots);
+      frozenBox = box;
+      preview.setAttribute("viewBox", box.join(" "));
+      svg("path", { d: pathOf(built.cubics), fill: colour }, preview);
+      dots.forEach(([x, y], i) => {
+        const dot = svg("circle", {
+          cx: x, cy: y, r: box[2] * 0.02, class: `dot${i === state.selected ? " selected" : ""}`,
+          role: "button", tabindex: 0, "aria-label": `Dot ${i + 1}`, "data-focus": `dot:${i}`,
+        }, preview);
+        dot.addEventListener("pointerdown", (e) => startDrag(e as PointerEvent, i));
+        dot.addEventListener("focus", () => select(i));
+      });
     });
     $("stage-hint").hidden = !dots.length;
   }
@@ -156,6 +185,7 @@ export function mountStudio(page: Document) {
     const preview = $("preview") as unknown as SVGSVGElement;
     preview.setPointerCapture?.(event.pointerId);
     const before = snapshot(state);
+    const docBefore = JSON.stringify(state.doc);
     state.selected = index;
     dragging = true;
     const move = (e: PointerEvent) => {
@@ -170,7 +200,7 @@ export function mountStudio(page: Document) {
       preview.removeEventListener("pointerup", up);
       preview.removeEventListener("pointercancel", up);
       dragging = false;
-      if (snapshot(state) !== before) history.remember(before);
+      if (JSON.stringify(state.doc) !== docBefore) history.remember(before);
       render();
     };
     preview.addEventListener("pointermove", move);
@@ -249,39 +279,40 @@ export function mountStudio(page: Document) {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  function exportAction(kind: "copy" | "svg" | "png", button: HTMLButtonElement, cubics: ArrayLike<number>) {
-    const current = EXPORTS[tab];
+  function exportAction(kind: "copy" | "svg" | "png", button: HTMLButtonElement, label: string, cubics: ArrayLike<number>) {
+    const flash = (text: string) => {
+      button.textContent = text;
+      setTimeout(() => { button.textContent = label; }, 1400);
+    };
     if (kind === "copy") {
-      const label = button.textContent;
-      const done = (text: string) => {
-        button.textContent = text;
-        setTimeout(() => { button.textContent = label; }, 1400);
-      };
-      if (!navigator.clipboard) return done("Copy failed");
-      navigator.clipboard.writeText(current.code(cubics)).then(() => done("Copied"), () => done("Copy failed"));
+      if (!navigator.clipboard) return flash("Copy failed");
+      navigator.clipboard.writeText(EXPORTS[tab].code(cubics)).then(() => flash("Copied"), () => flash("Copy failed"));
     }
     if (kind === "svg") download(new Blob([svgFile(cubics, colour)], { type: "image/svg+xml" }), "svg");
     if (kind === "png") {
       const canvas = html("canvas", { width: PNG_SIZE, height: PNG_SIZE });
       const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      if (!ctx) return flash("Download failed");
       ctx.fillStyle = colour;
       ctx.fill(new Path2D(svgPath(cubics, PNG_SIZE, 2)));
-      canvas.toBlob((blob) => { if (blob) download(blob, "png"); }, "image/png");
+      canvas.toBlob((blob) => (blob ? download(blob, "png") : flash("Download failed")), "image/png");
     }
   }
 
   function renderExport(cubics: ArrayLike<number> | null) {
-    for (const b of Array.from($("tabs").querySelectorAll("button"))) b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+    for (const b of Array.from($("tabs").querySelectorAll("button"))) {
+      b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+      b.tabIndex = b.dataset.tab === tab ? 0 : -1;
+    }
     const current = EXPORTS[tab];
     $("export-about").textContent = current.about();
     const buttons = $("export-buttons");
-    buttons.replaceChildren();
-    current.buttons.forEach(([label, kind], i) => {
+    refill(buttons, () => current.buttons.forEach(([label, kind], i) => {
       const b = html("button", { textContent: label, className: i === 0 ? "primary" : "", disabled: !cubics });
-      if (cubics) b.addEventListener("click", () => exportAction(kind, b, cubics));
+      b.dataset.focus = `export:${label}`;
+      if (cubics) b.addEventListener("click", () => exportAction(kind, b, label, cubics));
       buttons.appendChild(b);
-    });
+    }));
     $("export-code").textContent = cubics ? current.code(cubics) : "";
   }
 
@@ -308,10 +339,12 @@ export function mountStudio(page: Document) {
   }
 
   const undo = () => {
+    if (dragging) return;
     const previous = history.undo(snapshot(state));
     if (previous) { state = restore(previous); lastGood = null; render(); }
   };
   const redo = () => {
+    if (dragging) return;
     const next = history.redo(snapshot(state));
     if (next) { state = restore(next); lastGood = null; render(); }
   };
@@ -326,7 +359,16 @@ export function mountStudio(page: Document) {
     tab = chosen;
     renderExport(normalizedCubics());
   });
-  page.defaultView?.addEventListener("keydown", (e) => {
+  $("tabs").addEventListener("keydown", (e) => {
+    const step = ({ ArrowLeft: -1, ArrowRight: 1 } as Record<string, number>)[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const tabs = Array.from($("tabs").querySelectorAll<HTMLButtonElement>("[role=tab]"));
+    const next = tabs[(tabs.findIndex((b) => b.dataset.tab === tab) + step + tabs.length) % tabs.length];
+    next.click();
+    next.focus();
+  });
+  const onKey = (e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
       e.preventDefault();
       if (e.shiftKey) redo();
@@ -334,7 +376,7 @@ export function mountStudio(page: Document) {
       return;
     }
     const shape = state.doc.shape;
-    if (shape.kind !== "polygon" || (e.target as HTMLElement).closest?.("input, textarea, pre")) return;
+    if (shape.kind !== "polygon" || (e.target as HTMLElement).closest?.("input, textarea, select, pre, [role=tab]")) return;
     const step = e.shiftKey ? 0.05 : 0.005;
     const delta = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] } as Record<string, [number, number]>)[e.key];
     if (!delta) return;
@@ -344,9 +386,14 @@ export function mountStudio(page: Document) {
     const [x, y] = shape.vertices[state.selected];
     moveDot(state, state.selected, [x + dx, y + dy]);
     render();
-  });
+  };
+  page.defaultView?.addEventListener("keydown", onKey);
 
   const versions = JSON.parse(version());
   $("engine-version").textContent = versions.graphicsShapes;
   render();
+  return () => {
+    clearTimeout(liveTimer);
+    page.defaultView?.removeEventListener("keydown", onKey);
+  };
 }
