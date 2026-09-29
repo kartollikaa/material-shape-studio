@@ -16,9 +16,9 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 
 | # | PR title | Purpose (one sentence) | Strategy | Size budget | Depends on | Status |
 |---|----------|------------------------|----------|-------------|------------|--------|
-| S0 | `tech/s0-scaffold` | A buildable, deployable skeleton: Gradle KMP engine, npm workspace, licence, CI and Pages deploy of a placeholder page | safe | ~300 | — | in-review |
-| S1 | `feature/s1-engine-pipeline` | The engine builds `ngon` and `polygon` (with repeat) documents plus `normalize` in JVM and JS, proven equal by golden fixtures, packaged with types, its bundle size known | safe | ~960, justified | S0 | in-progress |
-| S1b | `feature/s1b-engine-document` | Every remaining shape kind and transform, and morph handles, through the same pipeline | safe | ~650 | S1 | planned |
+| S0 | `tech/s0-scaffold` | A buildable, deployable skeleton: Gradle KMP engine, npm workspace, licence, CI and Pages deploy of a placeholder page | safe | ~300 | — | merged |
+| S1 | `feature/s1-engine-pipeline` | The engine builds `ngon` and `polygon` (with repeat) documents plus `normalize` in JVM and JS, proven equal by golden fixtures, packaged with types, its bundle size known | safe | ~960, justified | S0 | merged |
+| S1b | `feature/s1b-engine-document` | Every remaining shape kind and transform, and morph handles, through the same pipeline | safe | ~920, justified | S1 | merged |
 | S2 | `feature/s2-catalogue` | The 35 catalogue shapes as vendored documents, proven equal to Compose's `MaterialShapes` | safe | ~500 | S1b | planned |
 | S3 | `feature/s3-ui-shell` | A site that shows the catalogue with a live preview and carries the document in the URL | safe | ~650 | S2 | planned |
 | S4 | `feature/s4-editor-core` | Create and edit any document kind with sliders and numeric inputs, drag slice vertices, edit the transforms list | safe | ~600 | S3 | planned |
@@ -82,7 +82,9 @@ so S4b and S4c can move after S5 if export is wanted sooner.
   both targets; (2) each transform has a fixture and a test of its documented geometry; (3) parity
   holds for every new fixture; (4) morph handles return cubics at any progress, match the fixture
   at 0, 0.5 and 1, and a released handle throws; (5) the new validation rules name their field.
-- **Re-cut if over budget:** the morph handles move to S6.
+- **Size:** about 920 reviewable lines, 500 of them tests. The named re-cut, morph handles to S6,
+  would save about 180 and still leave the slice above 600, while S6 would then have to change the
+  engine and the UI at once.
 - **Ships safely because:** engine only.
 - **Cleanup owed:** none.
 
@@ -99,7 +101,9 @@ so S4b and S4c can move after S5 if export is wanted sooner.
 - **Cleanup owed:** none.
 
 ### S3 — `feature/s3-ui-shell`
-- **In scope:** the engine wrapper, the document reducer, the URL codec with tests, the preview
+- **In scope:** engine limits for documents that arrive from a URL (finite numbers within the float
+  range, caps on vertex and repeat counts, quoted scalars rejected, messages that name the missing
+  field itself); the engine wrapper, the document reducer, the URL codec with tests, the preview
   component (size, fill or outline, light or dark), the catalogue grid, the `view=` switch with
   editor, import and morph views as placeholders that say what is coming, the placeholder page
   replaced by the app.
@@ -235,7 +239,16 @@ so S4b and S4c can move after S5 if export is wanted sooner.
   is not only a start point), a `features` shape's default centre is the anchor average, and
   `toShape()` maps the unit square to the component rather than fitting the bounds. S1b and S3
   implement those.
+- 2026-09-28: S1's review deferred engine hardening (number range and size caps, quoted scalars,
+  message wording) to S3, where documents first arrive from a URL, so S1b stays within its size.
+  S1b measured about 920 reviewable lines, 500 of them tests, and keeps morph rather than moving it
+  to S6.
+- 2026-09-28: `morphBounds` bounds the outline, not the control points, which can lie outside it;
+  `fillSquare` guards flat shapes against the library's `Float.MIN_VALUE` bounds quirk.
 - 2026-09-28: the S1 gate showed the engine's own tests import it through the package's
   self-reference, so they did not prove a second workspace can consume it. `web` now depends on the
   engine package from S1, with a test that imports it, and the deploy packages the engine before it
   builds the site; S3 no longer carries that wiring.
+- 2026-09-28: S0, S1 and S1b merged in order with merge commits on the owner's go. S1b's review
+  fixes landed first: `fillSquare` measures the true extent at negative coordinates, a validation
+  test the merge had disabled runs again, and the malformed-features error paths are tested.

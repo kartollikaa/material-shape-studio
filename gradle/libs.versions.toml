@@ -2,8 +2,10 @@
 kotlin = "2.4.20"
 graphics-shapes = "1.1.0"
 kotlinx-serialization = "1.11.0"
+androidx-collection = "1.5.0"
 
 [libraries]
+androidx-collection = { module = "androidx.collection:collection", version.ref = "androidx-collection" }
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 

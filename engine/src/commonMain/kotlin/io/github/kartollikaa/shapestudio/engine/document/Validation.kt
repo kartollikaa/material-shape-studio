@@ -1,5 +1,6 @@
 package io.github.kartollikaa.shapestudio.engine.document
 
+import androidx.graphics.shapes.FeatureSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.elementNames
@@ -85,7 +86,78 @@ private fun ShapeDocument.validate() {
             s.perVertexRounding?.let { checkPerVertex(it, s.vertices) }
             s.rounding?.check("shape.rounding")
         }
+        is Shape.Circle -> {
+            s.vertices?.let { if (it < 3) reject("shape.vertices", "a circle needs at least 3 vertices, got $it") }
+            s.radius?.positive("shape.radius")
+        }
+        is Shape.Rectangle -> {
+            s.width?.positive("shape.width")
+            s.height?.positive("shape.height")
+            s.perVertexRounding?.let { checkPerVertex(it, 4) }
+            s.rounding?.check("shape.rounding")
+        }
+        is Shape.Star -> {
+            checkVerticesPerRadius(s.verticesPerRadius)
+            val radius = s.radius ?: 1f
+            val innerRadius = s.innerRadius ?: 0.5f
+            s.radius?.positive("shape.radius")
+            innerRadius.positive("shape.innerRadius")
+            if (innerRadius >= radius) reject("shape.innerRadius", "must be less than the radius $radius, got $innerRadius")
+            s.perVertexRounding?.let { checkPerVertex(it, 2 * s.verticesPerRadius) }
+            s.rounding?.check("shape.rounding")
+            s.innerRounding?.check("shape.innerRounding")
+        }
+        is Shape.Pill -> {
+            s.width?.positive("shape.width")
+            s.height?.positive("shape.height")
+            s.smoothing?.fraction("shape.smoothing")
+        }
+        is Shape.PillStar -> {
+            s.width?.positive("shape.width")
+            s.height?.positive("shape.height")
+            val verticesPerRadius = s.verticesPerRadius ?: 8
+            checkVerticesPerRadius(verticesPerRadius)
+            s.innerRadiusRatio?.let {
+                if (it <= 0f || it > 1f) reject("shape.innerRadiusRatio", "must be greater than 0 and at most 1, got $it")
+            }
+            s.perVertexRounding?.let { checkPerVertex(it, 2 * verticesPerRadius) }
+            s.rounding?.check("shape.rounding")
+            s.innerRounding?.check("shape.innerRounding")
+            s.vertexSpacing?.fraction("shape.vertexSpacing")
+            s.startLocation?.fraction("shape.startLocation")
+        }
+        is Shape.Features -> {
+            val features = try {
+                FeatureSerializer.parse(s.serialized)
+            } catch (e: Exception) {
+                reject("shape.serialized", "not a feature string: ${e.message}")
+            }
+            if (features.size < 2) reject("shape.serialized", "a polygon needs at least 2 features, got ${features.size}")
+        }
     }
+    transforms.forEachIndexed { i, transform ->
+        when (transform) {
+            is Transform.StartAngle ->
+                if (i != transforms.lastIndex) reject("transforms[$i]", "startAngle must be the last transform")
+            is Transform.Scale -> {
+                if (transform.x == 0f) reject("transforms[$i].x", "a scale factor of 0 collapses the shape")
+                if (transform.y == 0f) reject("transforms[$i].y", "a scale factor of 0 collapses the shape")
+            }
+            else -> Unit
+        }
+    }
+}
+
+private fun checkVerticesPerRadius(count: Int) {
+    if (count < 2) reject("shape.verticesPerRadius", "must be at least 2, got $count")
+}
+
+private fun Float.positive(field: String) {
+    if (this <= 0f) reject(field, "must be greater than 0, got $this")
+}
+
+private fun Float.fraction(field: String) {
+    if (this < 0f || this > 1f) reject(field, "must be between 0 and 1, got $this")
 }
 
 private fun Shape.Polygon.expandedVertexCount(): Int {

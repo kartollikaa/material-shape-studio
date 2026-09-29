@@ -1,0 +1,1 @@
+{"v": 1, "shape": {"kind": "polygon", "vertices": [[2, 1], [1.4, 1.6]], "perVertexRounding": [{"radius": 0.1}, {"radius": 0.2}], "center": [1, 1], "repeat": {"count": 3, "mirror": false}}}

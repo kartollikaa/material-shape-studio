@@ -1,16 +1,23 @@
 package io.github.kartollikaa.shapestudio.engine.build
 
 import androidx.graphics.shapes.CornerRounding
+import androidx.graphics.shapes.Cubic
+import androidx.graphics.shapes.FeatureSerializer
 import androidx.graphics.shapes.RoundedPolygon
+import androidx.graphics.shapes.circle
+import androidx.graphics.shapes.pill
+import androidx.graphics.shapes.pillStar
+import androidx.graphics.shapes.rectangle
+import androidx.graphics.shapes.star
 import io.github.kartollikaa.shapestudio.engine.document.Point
 import io.github.kartollikaa.shapestudio.engine.document.Repeat
 import io.github.kartollikaa.shapestudio.engine.document.Rounding
 import io.github.kartollikaa.shapestudio.engine.document.Shape
 import io.github.kartollikaa.shapestudio.engine.document.ShapeDocument
-import io.github.kartollikaa.shapestudio.engine.document.Transform
+import io.github.kartollikaa.shapestudio.engine.document.reject
 
 internal fun ShapeDocument.toRoundedPolygon(): RoundedPolygon =
-    transforms.fold(shape.toRoundedPolygon()) { polygon, transform -> transform.applyTo(polygon) }
+    transforms.foldIndexed(shape.toRoundedPolygon()) { i, polygon, transform -> transform.applyTo(polygon, i) }
 
 private fun Shape.toRoundedPolygon(): RoundedPolygon = when (this) {
     is Shape.Ngon -> RoundedPolygon(
@@ -32,6 +39,60 @@ private fun Shape.toRoundedPolygon(): RoundedPolygon = when (this) {
     } else {
         repeated(repeat)
     }
+    is Shape.Circle -> RoundedPolygon.circle(
+        numVertices = vertices ?: 8,
+        radius = radius ?: 1f,
+        centerX = center?.x ?: 0f,
+        centerY = center?.y ?: 0f,
+    )
+    is Shape.Rectangle -> RoundedPolygon.rectangle(
+        width = width ?: 2f,
+        height = height ?: 2f,
+        rounding = rounding.toCornerRounding(),
+        perVertexRounding = perVertexRounding?.map { it.toCornerRounding() },
+        centerX = center?.x ?: 0f,
+        centerY = center?.y ?: 0f,
+    )
+    is Shape.Star -> RoundedPolygon.star(
+        numVerticesPerRadius = verticesPerRadius,
+        radius = radius ?: 1f,
+        innerRadius = innerRadius ?: 0.5f,
+        rounding = rounding.toCornerRounding(),
+        innerRounding = innerRounding?.toCornerRounding(),
+        perVertexRounding = perVertexRounding?.map { it.toCornerRounding() },
+        centerX = center?.x ?: 0f,
+        centerY = center?.y ?: 0f,
+    )
+    is Shape.Pill -> RoundedPolygon.pill(
+        width = width ?: 2f,
+        height = height ?: 1f,
+        smoothing = smoothing ?: 0f,
+        centerX = center?.x ?: 0f,
+        centerY = center?.y ?: 0f,
+    )
+    is Shape.PillStar -> RoundedPolygon.pillStar(
+        width = width ?: 2f,
+        height = height ?: 1f,
+        numVerticesPerRadius = verticesPerRadius ?: 8,
+        innerRadiusRatio = innerRadiusRatio ?: 0.5f,
+        rounding = rounding.toCornerRounding(),
+        innerRounding = innerRounding?.toCornerRounding(),
+        perVertexRounding = perVertexRounding?.map { it.toCornerRounding() },
+        vertexSpacing = vertexSpacing ?: 0.5f,
+        startLocation = startLocation ?: 0f,
+        centerX = center?.x ?: 0f,
+        centerY = center?.y ?: 0f,
+    )
+    is Shape.Features -> fromFeatures()
+}
+
+private fun Shape.Features.fromFeatures(): RoundedPolygon {
+    val features = FeatureSerializer.parse(serialized)
+    return try {
+        RoundedPolygon(features, centerX = center?.x ?: Float.NaN, centerY = center?.y ?: Float.NaN)
+    } catch (e: IllegalArgumentException) {
+        reject("shape.serialized", "the features do not form a polygon: ${e.message}")
+    }
 }
 
 private val materialSliceCentre = Point(0.5f, 0.5f)
@@ -49,19 +110,17 @@ private fun Shape.Polygon.repeated(repeat: Repeat): RoundedPolygon {
     )
 }
 
-private fun Transform.applyTo(polygon: RoundedPolygon): RoundedPolygon = when (this) {
-    Transform.Normalize -> polygon.normalized()
-}
-
 internal fun Rounding?.toCornerRounding(): CornerRounding =
     if (this == null) CornerRounding.Unrounded else CornerRounding(radius, smoothing)
 
 internal fun List<Point>.flatten(): FloatArray =
     FloatArray(size * 2) { i -> this[i / 2].let { if (i % 2 == 0) it.x else it.y } }
 
-internal fun RoundedPolygon.flatCubics(): FloatArray {
-    val out = FloatArray(cubics.size * 8)
-    cubics.forEachIndexed { i, c ->
+internal fun RoundedPolygon.flatCubics(): FloatArray = cubics.flatCubics()
+
+internal fun List<Cubic>.flatCubics(): FloatArray {
+    val out = FloatArray(size * 8)
+    forEachIndexed { i, c ->
         val o = i * 8
         out[o] = c.anchor0X
         out[o + 1] = c.anchor0Y

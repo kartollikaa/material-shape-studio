@@ -7,9 +7,9 @@ code for the platforms that have a port of `androidx.graphics.shapes`, plus SVG,
 An independent open-source project, not affiliated with or endorsed by Google. Material Design is a
 trademark of Google LLC.
 
-The engine builds `ngon` and `polygon` shape documents, including Material's repeat-and-mirror
-slices, on the JVM and in JavaScript. The site is still a placeholder page; the editor arrives slice
-by slice. Read in this order:
+The engine builds every shape kind and transform of the document format, including Material's
+repeat-and-mirror slices, and morphs between shapes, on the JVM and in JavaScript. The site is still
+a placeholder page; the editor arrives slice by slice. Read in this order:
 
 1. [docs/spec.md](docs/spec.md): what the app does and how its parts fit.
 2. [docs/decomposition.md](docs/decomposition.md): the delivery plan, one pull request per slice.
@@ -58,17 +58,19 @@ Starts a local development server.
 
 ## The engine package
 
-`@material-shape-studio/engine` exports `version()`, `build(doc)` and `buildCubics(doc)`. A document
-is JSON as described in [docs/spec.md](docs/spec.md); `buildCubics` returns a `Float32Array` with
-eight numbers per cubic Bézier. Fixture documents live in `engine/fixtures/documents`, and their
-JVM-built output in `engine/fixtures/expected`. After a deliberate change to the engine's output,
+`@material-shape-studio/engine` exports `version()`, `build(doc)`, `buildCubics(doc)`,
+`createMorph(start, end)`, `morphCubics(handle, progress)`, `morphBounds(handle)` and
+`releaseMorph(handle)`. A document is JSON as described in [docs/spec.md](docs/spec.md);
+`buildCubics` and `morphCubics` return a `Float32Array` with eight numbers per cubic Bézier.
+Fixture documents live in `engine/fixtures/documents` and morph fixtures in `engine/fixtures/morphs`;
+their JVM-built output is in `engine/fixtures/expected` and `engine/fixtures/expected-morphs`. After a deliberate change to the engine's output,
 regenerate them:
 
 ```bash
 ./gradlew :engine:jvmTest -PupdateFixtures
 ```
 
-Production size of the engine, measured when S1 landed: 333.5 KB minified, 83.1 KB gzipped.
+Production size of the engine, measured when S1b landed: 394.6 KB minified, 96.7 KB gzipped.
 Re-measure it with:
 
 ```bash
