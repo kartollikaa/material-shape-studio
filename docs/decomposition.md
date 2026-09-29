@@ -20,22 +20,22 @@ The spec and this map land first via `tech/spec-and-map`; S0 starts after that m
 | S1 | `feature/s1-engine-pipeline` | The engine builds `ngon` and `polygon` (with repeat) documents plus `normalize` in JVM and JS, proven equal by golden fixtures, packaged with types, its bundle size known | safe | ~960, justified | S0 | merged |
 | S1b | `feature/s1b-engine-document` | Every remaining shape kind and transform, and morph handles, through the same pipeline | safe | ~920, justified | S1 | merged |
 | S2 | `feature/s2-catalogue` | The 35 catalogue shapes as vendored documents, proven equal to Compose's `MaterialShapes` | safe | ~500 | S1b | planned |
-| S3 | `feature/s3-ui-shell` | A site that shows the catalogue with a live preview and carries the document in the URL | safe | ~650 | S2 | planned |
-| S4 | `feature/s4-editor-core` | Create and edit any document kind with sliders and numeric inputs, drag slice vertices, edit the transforms list | safe | ~600 | S3 | planned |
-| S4b | `feature/s4b-direct-manipulation` | Corner and builder handles on the canvas, vertex insert and delete, rotation ring, snapping | safe | ~600 | S4 | planned |
-| S4c | `feature/s4c-editor-conveniences` | Master rounding with overrides and presets, reset and compare, variations strip, undo and redo, shortcuts panel | safe | ~550 | S4 | planned |
-| S5 | `feature/s5-exporters` | Export Kotlin/Compose, SVG and CSS with copy buttons, the Kotlin output proven by a compiled round trip, plus the Playwright smoke test | safe | ~700 | S4 | planned |
-| S6 | `feature/s6-morph` | Pick a target, scrub and play a morph, export the Compose `Morph` snippet | safe | ~400 | S5 | planned |
+| S3a | `feature/s3a-exporters-catalogue` | The 35 Material shapes generated from Compose's source, and the Compose, SVG and CSS exporters, all tested | safe | ~600 | S1b | in-review |
+| S3b | `feature/s3b-studio` | The approved prototype as the site: pick, adjust with dots and a few plain sliders, see it in use, export | safe | ~900, justified | S3a | planned |
+| S4 | `feature/s4-editor-core` | Superseded by S3b: the owner chose the prototype's simpler editor | — | — | — | dropped |
+| S4b | `feature/s4b-direct-manipulation` | Superseded by S3b: dots on the shape cover direct editing; handles, ring and snapping are not wanted | — | — | — | dropped |
+| S4c | `feature/s4c-editor-conveniences` | Superseded by S3b: undo, reset and per-dot roundness ship there; the rest is not wanted | — | — | — | dropped |
+| S5 | `feature/s5-proof-and-share` | A Playwright smoke test in CI, and share links that carry the document in the URL | safe | ~600 | S3b | planned |
+| S6 | `feature/s6-press-animation` | The shape morphs when pressed in the "In use" preview, and Compose gets the `Morph` code | safe | ~400 | S3b | planned |
 | S7 | `feature/s7-import` | Paste an SVG path, see and retype its features, keep it as a `features` document and export it | safe | ~600 | S5 | planned |
-| S8 | `feature/s8-more-exporters` | Java (Views), Dart, Swift, TypeScript exporters and PNG download | safe | ~700 | S7 | planned |
+| S8 | `feature/s8-more-exporters` | Java (Views), Dart, Swift and TypeScript exporters | safe | ~700 | S7 | planned |
 | S9 | `feature/s9-gallery-site` | A contributed-shapes gallery, user docs and custom-domain readiness | safe | ~400 | S8 | planned |
 
 Status values: `planned · in-progress · in-review · merged · dropped`
 
 Every slice is naturally safe: the site is additive and each slice ships a complete capability, so
-no feature toggles and no cleanup slices are needed. Budgets above 600 (S1b, S3, S5, S8) carry a
-named re-cut or a size justification in their details; the diff is sized before the PR opens. S5 depends on S4 core only,
-so S4b and S4c can move after S5 if export is wanted sooner.
+no feature toggles and no cleanup slices are needed. Budgets above 600 (S1, S1b, S3b, S8) carry a
+named re-cut or a size justification in their details; the diff is sized before the PR opens.
 
 ## Slice details
 
@@ -91,98 +91,60 @@ so S4b and S4c can move after S5 if export is wanted sooner.
 ### S2 — `feature/s2-catalogue`
 - **In scope:** the 35 documents as engine data with a NOTICE entry, `kind: "catalogue"`,
   `catalogue()`, `matchCatalogue` and the `catalogue` field of the build result, the JVM sync test against `MaterialShapes` from the Compose
-  Multiplatform desktop artifact pinned in the version catalogue, fixtures regenerated.
-- **Out of scope:** showing the catalogue (S3).
+  Multiplatform desktop artifact pinned in the version catalogue, fixtures regenerated; the studio
+  reads its shapes from the engine, and `web/src/catalogue` with its generator is retired.
+- **Must land before** the generator's pinned androidx commit moves: until the sync test exists,
+  nothing independent checks the generated shapes against Compose.
+- **Out of scope:** showing the catalogue (S3b).
 - **Acceptance:** (1) all 35 vendored documents match Compose's cubics within 1e-4; (2) changing
   one vendored number fails the sync test, shown once; (3) `matchCatalogue` recognises each
   entry built from its own document and returns null for a modified one; (4) the parity suite
   covers the 35. Proof: sync test output, the deliberate-break run.
 - **Ships safely because:** engine only.
+- **Cleanup owed:** none; S2 itself retires the web catalogue.
+
+### S3a — `feature/s3a-exporters-catalogue`
+- **In scope:** `web/scripts/generate-catalogue.mjs`, which reads `MaterialShapes.kt` at a pinned
+  androidx commit and writes the 35 shapes as documents; the document types; the Compose, SVG and CSS
+  exporters with the repeat expansion; tests for all of them; spec §7 and this re-cut.
+- **Out of scope:** the page (S3b); moving the catalogue into the engine (S2).
+- **Acceptance:** frozen as AC-1..AC-11. The headline ones: the generator reproduces the committed
+  file; all 35 build and match the hand-transcribed fixtures; the Compose export uses `MaterialShapes`
+  for untouched shapes; the emitted repeat vertices match the engine within 1e-4; the exported Kotlin
+  compiles and matches the engine for all 35 shapes and six edited ones.
+- **Size:** about 600 reviewable lines, 180 of them tests; the catalogue JSON is generated.
+- **Ships safely because:** nothing on the site uses it yet.
 - **Cleanup owed:** none.
 
-### S3 — `feature/s3-ui-shell`
-- **In scope:** engine limits for documents that arrive from a URL (finite numbers within the float
-  range, caps on vertex and repeat counts, quoted scalars rejected, messages that name the missing
-  field itself); the engine wrapper, the document reducer, the URL codec with tests, the preview
-  component (size, fill or outline, light or dark), the catalogue grid, the `view=` switch with
-  editor, import and morph views as placeholders that say what is coming, the placeholder page
-  replaced by the app.
-- **Out of scope:** editing (S4), export (S5).
-- **Acceptance:** (1) the deployed site shows all 35 shapes and opens one in the preview; (2) a
-  share URL reopens the same document, and a corrupt hash opens the catalogue with a notice;
-  (3) the preview controls work with keyboard only; (4) codec and reducer tests pass. Proof:
-  vitest output, a screenshot of the live site in the PR body, a share URL that round-trips.
-- **Re-cut if over budget:** the URL codec becomes its own PR before the grid.
-- **Ships safely because:** the catalogue is a complete feature; placeholders name what is next.
+### S3b — `feature/s3b-studio`
+- **In scope:** the approved prototype as the site, in framework-free TypeScript: the picker of 35
+  shapes, the preview with draggable dots, the adjust panel with only the sliders that change the
+  selected shape, colour, reset, undo and redo, "More options", the "In use" row, and the export panel
+  with Compose, SVG, PNG and CSS. React leaves the project. Tests for the editing logic and a DOM test
+  of the page. Spec §6 and the README describe the studio.
+- **Out of scope:** share links and the Playwright test (S5); the press animation (S6).
+- **Ships safely because:** it replaces the placeholder with a complete tool.
 - **Cleanup owed:** none.
 
-### S4 — `feature/s4-editor-core`
-- **In scope:** the kind selector, slider plus numeric input bindings for every numeric field with
-  the library's ranges, label scrubbing, the polygon canvas with draggable slice vertices and
-  ghosted repeated copies, keyboard nudging, per-vertex radius and smoothing controls, repeat count
-  and mirror, the transforms list with reorder, three-decimal rounding on write, the unit-square
-  warning, validator errors next to their control.
-- **Out of scope:** canvas handles beyond vertices (S4b), history and presets (S4c), export (S5).
-- **Acceptance:** (1) every kind in spec §3 can be created and every field edited from the
-  controls; (2) opening a catalogue shape shows Material's own parameters and reproduces it
-  unchanged; (3) dragging a vertex updates the document, the preview and the URL; (4) typing a
-  value or scrubbing a label writes the same field as the slider; (5) a validator error is shown
-  next to the control, never as a blank preview. Proof: vitest for bindings and reducer, a
-  recorded edit session in the PR body.
-- **Ships safely because:** the editor is complete for what it exposes.
-- **Cleanup owed:** none.
+### S4, S4b, S4c — dropped
+The owner found the fuller editor these slices described too complex and approved the prototype's
+simpler one, which S3b ships.
 
-### S4b — `feature/s4b-direct-manipulation`
-- **In scope:** radius and smoothing handles per corner with hover values, edge-midpoint insert
-  and Delete for vertices, handles for builder kinds (star outer and inner radius, pill width and
-  height, rectangle corner radius), the rotation ring writing a `rotate` transform, grid and axis
-  snapping with an Alt bypass, hit testing and pointer capture that work with touch.
-- **Out of scope:** new document fields; everything a handle does is already a control in S4.
-- **Acceptance:** (1) every handle writes the same document field as its control and the two stay
-  in sync; (2) inserting and deleting vertices keeps the rounding arrays valid; (3) snapping can be
-  toggled and bypassed with Alt; (4) the handles work with a mouse and with touch. Proof: vitest
-  for the handle-to-field mapping, a recorded session with a mouse and with the mobile emulation.
-- **Ships safely because:** additive on the S4 canvas.
-- **Cleanup owed:** none.
-
-### S4c — `feature/s4c-editor-conveniences`
-- **In scope:** the master rounding control with per-corner overrides, the link toggle, "copy to
-  all corners", rounding presets, "Reset" and "Compare" against the catalogue original, the
-  variations strip, undo and redo with the past, present and future stack, the shortcuts panel.
-- **Out of scope:** in-context prototyping (later idea).
-- **Acceptance:** (1) undo and redo restore exact documents and the URL follows; (2) a variation
-  stays within every field's range and builds without error; (3) "Reset" reproduces the catalogue
-  shape's fixture; (4) the master control and overrides never produce an invalid rounding array.
-  Proof: vitest for the history reducer, the variation generator and the rounding merge; a
-  recorded session.
+### S5 — `feature/s5-proof-and-share`
+- **In scope:** a Playwright smoke test on the built site; share links, with the document in the URL hash; engine limits for
+  documents that arrive from a link (finite numbers within the float range, caps on vertex and
+  repeat counts, quoted scalars rejected, messages that name the missing field).
+- **Acceptance:** (1) the smoke test picks a shape, moves a slider and copies the Compose code; (2) a share
+  link reopens the same shape, and a corrupt link opens the studio with a notice.
 - **Ships safely because:** additive.
 - **Cleanup owed:** none.
 
-### S5 — `feature/s5-exporters`
-- **In scope:** the exporter contract, Kotlin/Compose with catalogue equality and transforms, SVG,
-  CSS `path()` and `shape()`, the export panel with copy buttons and per-target options,
-  snapshot tests, the Kotlin round trip (a script emits the fixtures' snippets into a generated
-  JVM test source set that `./gradlew check` compiles and renders), the Playwright smoke test
-  and its CI job.
-- **Out of scope:** the other targets (S8), the morph snippet (S6).
-- **Acceptance:** (1) a catalogue document exports as `MaterialShapes.Name`; (2) every fixture's
-  Kotlin snippet compiles and renders cubics equal to the fixture; (3) SVG and CSS snapshots
-  match for every fixture; (4) the smoke test opens a catalogue shape, moves a slider and copies
-  Kotlin on the built site; (5) breaking the exporter fails the round trip, shown once. Proof:
-  round-trip and snapshot output, the smoke test run, the deliberate-break run.
-- **Re-cut if over budget:** the Playwright setup ships first as `tech/playwright-smoke`.
-- **Ships safely because:** export is a complete feature for three targets.
-- **Cleanup owed:** none.
-
-### S6 — `feature/s6-morph`
-- **In scope:** the morph view (target picker from the catalogue or a pasted share URL, scrubber,
-  play), `morph=` in the URL, the frame drawn from `morphCubics`, the Compose `Morph` snippet in
-  the Kotlin exporter, a morph fixture at three progress values in the parity suite.
-- **Out of scope:** morph export to other targets.
-- **Acceptance:** (1) any two documents morph and the frame matches the JVM fixture at 0, 0.5
-  and 1; (2) the share URL restores both documents and the view; (3) the exported snippet
-  compiles in the round trip. Proof: parity and round-trip output, a recorded scrub.
-- **Ships safely because:** additive view.
+### S6 — `feature/s6-press-animation`
+- **In scope:** in the "In use" row, the icon button morphs to a chosen pressed shape when pressed;
+  the Compose export adds the `Morph` code for it.
+- **Acceptance:** (1) pressing the preview button morphs it and releasing morphs it back; (2) the
+  exported `Morph` code compiles in the S5 round trip.
+- **Ships safely because:** additive.
 - **Cleanup owed:** none.
 
 ### S7 — `feature/s7-import`
@@ -201,13 +163,12 @@ so S4b and S4c can move after S5 if export is wanted sooner.
 ### S8 — `feature/s8-more-exporters`
 - **In scope:** Java (Views) with the constant-name mapping, Dart with a package option whose
   API names are read from the chosen package when written, Swift `UIBezierPath` and SwiftUI
-  `Path`, TypeScript against the engine package, PNG download from the preview; snapshot tests;
-  a `dart test` job if the Dart package can be tested in CI.
+  `Path`, TypeScript against the engine package; snapshot tests; a `dart test` job if the Dart
+  package can be tested in CI.
 - **Out of scope:** new document features.
 - **Acceptance:** (1) each target has a snapshot for every fixture; (2) the Java snippets compile
-  in the round trip source set; (3) PNG downloads at the chosen size. Proof: snapshot and
-  round-trip output, a downloaded PNG attached to the PR.
-- **Re-cut if over budget:** Java and Dart first, then Swift, TypeScript and PNG as `feature/s8b`.
+  in the round trip source set. Proof: snapshot and round-trip output.
+- **Re-cut if over budget:** Java and Dart first, then Swift and TypeScript as `feature/s8b`.
 - **Ships safely because:** each target is complete when it appears in the selector.
 - **Cleanup owed:** none.
 
@@ -252,3 +213,14 @@ so S4b and S4c can move after S5 if export is wanted sooner.
 - 2026-09-28: S0, S1 and S1b merged in order with merge commits on the owner's go. S1b's review
   fixes landed first: `fillSquare` measures the true extent at negative coordinates, a validation
   test the merge had disabled runs again, and the malformed-features error paths are tested.
+- 2026-09-29: the owner approved the local prototype and asked for it as the site. S3 becomes S3a
+  (catalogue data and exporters) and S3b (the studio page). The prototype's simpler editor replaces
+  S4, S4b and S4c, which are dropped. S5 keeps the compiled Kotlin round trip and the Playwright smoke
+  test and gains share links. S6 becomes the press animation, which is how Material uses morphing. The
+  UI stays framework-free TypeScript, as the prototype is. The 35 shapes ship as data generated from
+  Compose's source at a pinned commit until S2 vendors them into the engine with the sync test.
+  The engine hardening deferred to S3 moves to S5, where documents first arrive from a link.
+- 2026-09-29: S3a's review asked for durable proof of the Compose export. The compiled round trip
+  moved from S5 into S3a and runs in CI over every catalogue shape, every exportable engine fixture
+  and a set of edited shapes. S2 must land before the catalogue's pinned commit moves, and it
+  retires the web catalogue.
