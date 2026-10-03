@@ -1,11 +1,12 @@
 import { build, buildCubics, version } from "@material-shape-studio/engine";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
+import { loadSharedShape } from "./share";
 import type { ShapeDocument, Transform } from "../document";
 import { cssRule } from "../export/css";
 import { kotlinFile } from "../export/kotlin";
 import { svgFile, svgPath } from "../export/svg";
 import {
-  addDot, canRemoveDot, History, isEdited, mainControls, moreControls, moveDot, pick, removeDot, restore, round3, snapshot,
+  addDot, canRemoveDot, fromDocument, History, isEdited, mainControls, moreControls, moveDot, pick, removeDot, restore, round3, snapshot,
   viewTransforms, type Control, type EditorState,
 } from "./editor";
 import { backward, forward, squareAround, type Box } from "./geometry";
@@ -75,12 +76,12 @@ export function mountStudio(page: Document) {
         svg("path", { d: thumbs[name].d }, svg("svg", { viewBox: thumbs[name].box, "aria-hidden": "true" }, b));
         b.addEventListener("click", () => { remember(); state = pick(name); lastGood = null; render(); });
         b.addEventListener("pointerenter", () => { $("caption").textContent = displayName(name); });
-        b.addEventListener("pointerleave", () => { $("caption").textContent = `Selected: ${displayName(state.name)}`; });
+        b.addEventListener("pointerleave", () => { $("caption").textContent = `Selected: ${displayName(state.name ?? "Custom shape")}`; });
         container.appendChild(b);
       }
     }
     for (const b of Array.from(container.children) as HTMLElement[]) b.setAttribute("aria-pressed", String(b.dataset.name === state.name));
-    $("caption").textContent = `Selected: ${displayName(state.name)}`;
+    $("caption").textContent = `Selected: ${displayName(state.name ?? "Custom shape")}`;
   }
 
   function controlRow(container: HTMLElement, c: Control) {
@@ -125,8 +126,8 @@ export function mountStudio(page: Document) {
   }
 
   function renderControls() {
-    $("shape-name").textContent = displayName(state.name);
-    $("shape-status").textContent = isEdited(state) ? "Edited shape" : "Material original";
+    $("shape-name").textContent = displayName(state.name ?? "Custom shape");
+    $("shape-status").textContent = isEdited(state) ? "Edited shape" : state.name ? "Material original" : "Custom shape";
     $("reset").hidden = !isEdited(state);
     const main = $("controls");
     const controls = mainControls(state);
@@ -265,7 +266,7 @@ export function mountStudio(page: Document) {
 
   const EXPORTS: Record<Tab, { about: () => string; code: (cubics: ArrayLike<number>) => string; buttons: [string, "copy" | "svg" | "png"][] }> = {
     compose: {
-      about: () => (isEdited(state)
+      about: () => (isEdited(state) || !state.name
         ? "Your edited shape as code. Paste it into a Kotlin file of an app that uses Compose Material 3 and androidx.graphics:graphics-shapes."
         : `This is Material's own MaterialShapes.${state.name}. Paste the code into a Kotlin file of an app that uses Compose Material 3.`),
       code: () => kotlinFile(state.doc, { catalogueName: isEdited(state) ? null : state.name, colour }),
@@ -288,7 +289,7 @@ export function mountStudio(page: Document) {
     },
   };
 
-  const fileName = () => `${displayName(state.name).toLowerCase().replace(/\s+/g, "-")}${isEdited(state) ? "-edited" : ""}`;
+  const fileName = () => `${displayName(state.name ?? "Custom shape").toLowerCase().replace(/\s+/g, "-")}${isEdited(state) ? "-edited" : ""}`;
   function download(blob: Blob, extension: string) {
     const a = html("a", { href: URL.createObjectURL(blob), download: `${fileName()}.${extension}` });
     a.click();
@@ -352,6 +353,12 @@ export function mountStudio(page: Document) {
     const cubics = normalizedCubics();
     renderInUse(cubics);
     renderExport(cubics);
+    try {
+      const bounds = buildDoc(state.doc).bounds;
+      $("bounds-warning").hidden = bounds.every((v, i) => i < 2 ? v >= -1e-4 : v <= 1 + 1e-4);
+    } catch {
+      $("bounds-warning").hidden = true;
+    }
     ($("undo") as HTMLButtonElement).disabled = !history.canUndo;
     ($("redo") as HTMLButtonElement).disabled = !history.canRedo;
     if (view && scroll && (view.scrollX !== scroll[0] || view.scrollY !== scroll[1])) view.scrollTo(scroll[0], scroll[1]);
@@ -370,7 +377,21 @@ export function mountStudio(page: Document) {
 
   $("undo").addEventListener("click", undo);
   $("redo").addEventListener("click", redo);
-  $("reset").addEventListener("click", () => { remember(); state = pick(state.name); lastGood = null; render(); });
+  $("reset").addEventListener("click", () => {
+    remember();
+    state = state.name ? pick(state.name) : fromDocument(state.initial);
+    lastGood = null;
+    render();
+  });
+  $("copy-document").addEventListener("click", () => {
+    const button = $("copy-document");
+    if (!navigator.clipboard) { button.textContent = "Copy failed"; return; }
+    navigator.clipboard.writeText(JSON.stringify(state.doc)).then(
+      () => { button.textContent = "Copied document"; },
+      () => { button.textContent = "Copy failed"; },
+    );
+  });
+  $("share-dismiss").addEventListener("click", () => { $("share-notice").hidden = true; });
   $("colour").addEventListener("input", (e) => { colour = (e.target as HTMLInputElement).value; renderLive(); });
   $("tabs").addEventListener("click", (e) => {
     const chosen = (e.target as HTMLElement).dataset?.tab as Tab | undefined;
@@ -411,8 +432,35 @@ export function mountStudio(page: Document) {
   const versions = JSON.parse(version());
   $("engine-version").textContent = versions.graphicsShapes;
   render();
+  let linkRevision = 0;
+  const loadLink = async () => {
+    const hash = page.defaultView?.location.hash ?? "";
+    if (!hash.startsWith("#doc=")) return;
+    const current = ++linkRevision;
+    const before = JSON.stringify(state.doc);
+    try {
+      const shared = await loadSharedShape(page, hash);
+      if (!shared) return;
+      buildDoc(shared.document);
+      if (current !== linkRevision || before !== JSON.stringify(state.doc)) return;
+      state = fromDocument(shared.document);
+      colour = shared.presentation.colour;
+      ($("colour") as HTMLInputElement).value = colour;
+      $("share-notice").hidden = true;
+      lastGood = null;
+      render();
+    } catch (error) {
+      if (current !== linkRevision) return;
+      $("share-error").textContent = `That shape link could not be opened: ${(error as Error).message}`;
+      $("share-notice").hidden = false;
+    }
+  };
+  page.defaultView?.addEventListener("hashchange", loadLink);
+  void loadLink();
   return () => {
+    linkRevision++;
     clearTimeout(liveTimer);
     page.defaultView?.removeEventListener("keydown", onKey);
+    page.defaultView?.removeEventListener("hashchange", loadLink);
   };
 }

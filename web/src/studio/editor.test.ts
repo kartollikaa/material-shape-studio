@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CATALOGUE_NAMES } from "../catalogue";
 import type { Point } from "../document";
 import {
-  addDot, canRemoveDot, History, isEdited, mainControls, moreControls, moveDot, pick, removeDot, restore, round3, snapshot,
+  addDot, canRemoveDot, fromDocument, History, isEdited, mainControls, moreControls, moveDot, pick, removeDot, restore, round3, snapshot,
   viewTransforms, type EditorState, type Radii,
 } from "./editor";
 import { backward, forward } from "./geometry";
@@ -41,6 +41,31 @@ const radii = (r: Radii) => [r.rounding, r.innerRounding, ...(r.perVertexRoundin
 const anchors = (cubics: ArrayLike<number>): Point[] =>
   Array.from({ length: cubics.length / 8 }, (_, i) => [cubics[8 * i], cubics[8 * i + 1]]);
 const nearest = (p: Point, points: Point[]) => Math.min(...points.map(([x, y]) => Math.hypot(x - p[0], y - p[1])));
+
+describe("imported documents", () => {
+  it("keeps an imported builder shape independent of the catalogue", () => {
+    const doc = { v: 1 as const, shape: { kind: "ngon" as const, vertices: 7 } };
+    const state = fromDocument(doc);
+    expect(state.doc).toEqual(doc);
+    expect(state.name).toBeNull();
+    expect(isEdited(state)).toBe(false);
+    mainControls(state).find((c) => c.label === "Sides")!.set(8);
+    expect(state.doc.shape).toEqual({ kind: "ngon", vertices: 8 });
+    expect(isEdited(state)).toBe(true);
+    expect(() => builds(state)).not.toThrow();
+  });
+
+  it("retains the imported polygon's editable pattern", () => {
+    const state = fromDocument({ v: 1, shape: {
+      kind: "polygon", vertices: [[0.2, 0.1], [0.8, 0.1], [0.5, 0.8]],
+      perVertexRounding: [{ radius: 0.1 }, { radius: 0.1 }, { radius: 0.1 }],
+    } });
+    expect(mainControls(state).map((c) => c.label)).toContain("Roundness");
+    moveDot(state, 0, [0.3, 0.2]);
+    expect(state.doc.shape.kind === "polygon" && state.doc.shape.vertices[0]).toEqual([0.3, 0.2]);
+    expect(() => builds(state)).not.toThrow();
+  });
+});
 
 describe("the adjust panel", () => {
   for (const name of CATALOGUE_NAMES) {

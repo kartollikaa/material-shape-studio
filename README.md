@@ -16,6 +16,10 @@ The focused canvas keeps the catalogue on the left, the shape in the centre, and
 the right, with exports below. On smaller screens those sections stack. Adjustments keep keyboard
 focus and the page's scroll position, so editing a slider does not pull the page back up.
 
+Shared `#doc=` links reopen the complete shape document in the editor, including shapes outside the
+catalogue. An imported shape can be adjusted and reset to its imported version. **Copy shape document**
+copies the current JSON for another agent or developer; malformed links leave the regular editor usable.
+
 Under it, the engine runs Google's `graphics-shapes` in the browser, so what you see is what
 Compose draws. Read in this order:
 

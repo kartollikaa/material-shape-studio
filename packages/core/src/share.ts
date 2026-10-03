@@ -11,10 +11,15 @@ export type SharedShape = { document: ShapeDocument; presentation: ShapePresenta
 
 const bytes = (value: string) => new TextEncoder().encode(value);
 
-function blobOf(data: Uint8Array): Blob {
+function streamOf(data: Uint8Array): ReadableStream<BufferSource> {
   const copy = new Uint8Array(data.length);
   copy.set(data);
-  return new Blob([copy.buffer]);
+  return new ReadableStream<BufferSource>({
+    start(controller) {
+      controller.enqueue(copy);
+      controller.close();
+    },
+  });
 }
 
 function validate(value: SharedShape): void {
@@ -66,7 +71,7 @@ export async function encodeShare(value: SharedShape): Promise<string> {
   validate(value);
   const payload = bytes(JSON.stringify(value));
   if (payload.length > DEFAULT_LIMITS.maxDocumentBytes) throw new Error("shape link exceeds size limit");
-  const compressed = await collect(blobOf(payload).stream().pipeThrough(new CompressionStream("deflate-raw")), DEFAULT_LIMITS.maxEncodedBytes);
+  const compressed = await collect(streamOf(payload).pipeThrough(new CompressionStream("deflate-raw")), DEFAULT_LIMITS.maxEncodedBytes);
   return `#doc=${encodeBase64(compressed)}`;
 }
 
@@ -75,7 +80,7 @@ export async function decodeShare(fragment: string): Promise<SharedShape> {
   if (!match || match[1].length > DEFAULT_LIMITS.maxEncodedBytes * 2) throw new Error("shape link payload is invalid or too large");
   const compressed = decodeBase64(match[1]);
   if (compressed.length > DEFAULT_LIMITS.maxEncodedBytes) throw new Error("shape link exceeds size limit");
-  const inflated = await collect(blobOf(compressed).stream().pipeThrough(new DecompressionStream("deflate-raw")), DEFAULT_LIMITS.maxDocumentBytes);
+  const inflated = await collect(streamOf(compressed).pipeThrough(new DecompressionStream("deflate-raw")), DEFAULT_LIMITS.maxDocumentBytes);
   const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(inflated)) as SharedShape;
   if (!value || typeof value !== "object" || !value.presentation) throw new Error("shape link document is invalid");
   validate(value);

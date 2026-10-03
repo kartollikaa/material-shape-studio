@@ -50,6 +50,12 @@ web/                    Vite + TypeScript, no UI framework; workspace member dep
 ```
 
 `npm install` works without a Gradle build because the package exists before its `dist/` is built.
+
+An external `#doc=` fragment is decoded with bounded decompression, then validated by the engine
+before it replaces the current editor document. Imported documents have no catalogue identity and
+retain their own reset baseline. The user can copy the current JSON after editing and return it to
+an agent. Invalid links show a dismissible notice without disabling the normal editor; shapes
+outside the unit square show a warning near the preview.
 Testing or running anything that imports the engine needs `./gradlew build` first, which runs the
 engine's tests and syncs the whole-program ES module and its `.d.mts` into `dist/`; `npm test` refuses
 to run without it. CI does both. `wasmJs` is a later optional target of the same module, not part of v1.

@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { build, buildCubics } from "@material-shape-studio/engine";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
+import { encodeShare } from "@material-shape-studio/core";
 import { svgPath } from "../export/svg";
 import { displayName, mountStudio } from "./page";
 
@@ -45,12 +46,46 @@ beforeEach(() => {
 });
 afterEach(() => {
   dispose();
+  window.history.replaceState(null, "", window.location.pathname);
   vi.useRealTimers();
   vi.restoreAllMocks();
   Reflect.deleteProperty(navigator, "clipboard");
 });
 
 describe("the studio page", () => {
+  it("opens an agent-created custom shape and copies the edited document", async () => {
+    const doc = { v: 1 as const, shape: { kind: "ngon" as const, vertices: 7 } };
+    dispose();
+    document.body.innerHTML = body;
+    window.location.hash = await encodeShare({
+      document: doc,
+      presentation: { colour: "#6750a4", theme: "light", context: "button" },
+    });
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Custom shape"));
+    expect(document.querySelectorAll("#preview path")).toHaveLength(1);
+    slide("Sides", 8);
+    expect(byId("shape-status").textContent).toBe("Edited shape");
+    const writeText = vi.fn(async (_value: string) => undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    click(byId("copy-document"));
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    expect(JSON.parse(writeText.mock.calls[0][0])).toEqual({ v: 1, shape: { kind: "ngon", vertices: 8 } });
+  });
+
+  it("recovers from a malformed shared shape", async () => {
+    dispose();
+    document.body.innerHTML = body;
+    window.location.hash = "#doc=not-a-shape";
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(byId("share-notice").hidden).toBe(false));
+    expect(byId("shape-name").textContent).toBe("Cookie 4 Sided");
+    click(byId("share-dismiss"));
+    expect(byId("share-notice").hidden).toBe(true);
+    click(document.querySelector('[data-name="Heart"]')!);
+    expect(byId("shape-name").textContent).toBe("Heart");
+  });
+
   it("offers the 35 Material shapes as named buttons, and picking one selects and names it", () => {
     const thumbs = () => Array.from(document.querySelectorAll("#picker .thumb"));
     expect(thumbs().map((t) => [t.tagName, t.getAttribute("aria-label")])).toEqual(CATALOGUE_NAMES.map((n) => ["BUTTON", displayName(n)]));
