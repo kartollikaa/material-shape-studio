@@ -131,10 +131,25 @@ constructor. Any other document, including an edited catalogue shape, exports as
 
 ### URL codec
 
-The hash holds a query string: `#doc=<payload>`.
-A payload is `base64url(deflate-raw(JSON))`, produced with the browser's `CompressionStream`, no
-dependency. A hash the codec cannot decode opens the default shape with a dismissable notice, never
-a blank page. The codec is a pure module with its own tests; nothing else touches `location.hash`.
+The hash holds human-readable named parameters, for example
+`#shape=Heart&rotate=45&roundness=125&colour=123456&tab=svg`. `shape` names the catalogue origin;
+control parameters use the displayed units, so roundness, softness, depth and squash use percentages,
+and rotate uses degrees. Controls at their catalogue defaults are omitted. Colour is a hex value
+without its leading `#`, and `tab` names the export format. `selected` preserves the selected dot.
+Optional `geometry`, `base` and `transforms` parameters carry ordinary URL-escaped JSON for edits
+that the named controls cannot reproduce, including custom dot positions and base corner radii.
+Named control values apply after that geometry, so editing a value in the address bar takes effect.
+
+The address updates synchronously during edits, including undo, redo and reset, using
+`history.replaceState` to preserve browser history. Copying the browser address shares the current
+state; no share button is needed. Opening or editing the hash restores the editor. Removing the
+hash restores the default shape, colour and export tab, and clears any link notice. The parameters
+can optionally declare `v=1`; other versions are rejected.
+
+A hash the codec cannot decode opens the default shape with a dismissible notice, never a blank
+page. Decoding bounds the address length, rejects unknown or duplicate parameters, validates control
+ranges and editor metadata, and limits geometry before passing the document to the engine's validation. The codec has its own tests;
+only its address synchronisation module reads the URL hash or writes the browser address.
 
 ## 4. Engine façade
 
