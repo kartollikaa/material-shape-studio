@@ -185,7 +185,7 @@ Every piece exists because one of the three jobs needs it: pick a shape, adjust 
 app. It follows the system's light or dark setting.
 
 The focused canvas places the catalogue on the left, the preview in the centre, and adjustments on
-the right. Export actions sit below the adjustments, with full code behind **Show code**. Smaller
+the right in a wider panel that gives labels and numeric inputs room. Export actions sit below the adjustments, with full code behind **Show code**. Smaller
 screens stack these sections in reading order. On phones, **Change shape** toggles the catalogue;
 picking a shape closes it and returns focus to the toggle. The compact canvas stays visible while
 adjustments scroll. The canvas names the selected shape and distinguishes Material's original from an
@@ -193,7 +193,7 @@ edited shape; Reset lives beside that name.
 
 - **Pick a shape**: the 35 catalogue shapes as thumbnails; hovering names one, and
   picking one replaces the current shape.
-- **Preview**: the shape at full size in the chosen colour. **Edit points** toggles a polygon's
+- **Preview**: the shape at full size in the chosen colour. Polygon shapes immediately show their
   slice dots and faint construction guides, explaining vertices outside the rounded outline;
   dragging a dot moves that vertex, and the repeated pattern follows. Arrow keys nudge the selected
   dot, Shift for larger steps. Transparent pointer targets extend beyond the visible dots without
@@ -205,9 +205,9 @@ edited shape; Reset lives beside that name.
   reason: Repeats for patterns that repeat, Points and Depth for stars, Sides for n-gons, Proportion
   for rectangles, Squash for circles, Roundness, and Rotate where it shows. Roundness scales every
   corner of Material's recipe together; sharp shapes start at 0%. Then Colour, used in the preview
-  and the exports. **Reset** appears once the shape differs from Material's. **More options**,
-  closed by default, holds Softness, the roundness of the selected dot, and adding or removing a
-  dot. Dot-specific controls appear only in **Edit points** mode; removal never leaves fewer than
+  and the exports. **Reset** appears once the shape differs from Material's. Polygon shapes show
+  all relevant properties in one list, including Softness and the roundness of the selected dot,
+  with **Add a dot** and **Remove the selected dot** directly below. Removal never leaves fewer than
   three corners or changes a one-off shape's repeats.
 - **Take it into your app**: tabs for Compose, SVG, PNG and CSS (§7), each with a one-line description, its
   copy or download buttons, and the code where there is code.

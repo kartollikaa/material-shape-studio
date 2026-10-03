@@ -42,7 +42,6 @@ let dispose: () => void;
 beforeEach(() => {
   document.body.innerHTML = body;
   dispose = mountStudio(document);
-  click(byId("edit-points"));
 });
 afterEach(() => {
   dispose();
@@ -52,14 +51,11 @@ afterEach(() => {
 });
 
 describe("the studio page", () => {
-  it("starts with a clean canvas and no point-specific controls", () => {
-    dispose();
-    document.body.innerHTML = body;
-    dispose = mountStudio(document);
-    expect(byId("edit-points").getAttribute("aria-pressed")).toBe("false");
-    expect(dots()).toHaveLength(0);
-    expect(labels("#more-controls label")).toEqual(["Softness"]);
-    expect(labels("#more-controls button")).toEqual([]);
+  it("starts with editable dots and point-specific controls without a mode toggle", () => {
+    expect(byId("edit-points")).toBeNull();
+    expect(dots()).toHaveLength(2);
+    expect(labels("#controls label")).toContain("Roundness of the selected dot");
+    expect(labels("#dot-actions button")).toEqual(["Add a dot", "Remove the selected dot"]);
   });
 
   it("closes the compact picker and returns focus after selecting a shape", () => {
@@ -69,17 +65,6 @@ describe("the studio page", () => {
     expect(byId("change-shape").getAttribute("aria-expanded")).toBe("false");
     expect(document.activeElement).toBe(byId("change-shape"));
     expect(byId("shape-name").textContent).toBe("Heart");
-  });
-
-  it("makes point editing optional without changing the shape", () => {
-    const before = exportCode();
-    click(byId("edit-points"));
-    expect(dots()).toHaveLength(0);
-    press("ArrowRight");
-    expect(exportCode()).toBe(before);
-    click(byId("edit-points"));
-    expect(dots()).toHaveLength(2);
-    expect(document.querySelector(".construction")).not.toBeNull();
   });
 
   it("accepts displayed numeric units, clamps values, and restores numeric focus", () => {
@@ -136,7 +121,7 @@ describe("the studio page", () => {
       expect(byId("shape-name").textContent).toBe(displayName(name));
     }
     click(document.querySelector('[data-name="Heart"]')!);
-    expect(labels("#controls label")).toEqual(["Roundness", "Rotate"]);
+    expect(labels("#controls label")).toEqual(["Roundness", "Rotate", "Softness", "Roundness of the selected dot"]);
   });
 
   it("names a tab icon that the site ships", () => {
@@ -225,12 +210,12 @@ describe("the studio page", () => {
     expect(inUse()).not.toBe(pathOf("Heart"));
   });
 
-  it("keeps More options for shapes that have them", () => {
-    expect(byId("more").hidden).toBe(false);
-    expect(labels("#more-controls label")).toEqual(["Softness", "Roundness of the selected dot"]);
-    expect(labels("#more-controls button")).toEqual(["Add a dot", "Remove the selected dot"]);
+  it("shows all relevant properties together without More options", () => {
+    expect(byId("more")).toBeNull();
+    expect(labels("#controls label")).toEqual(["Repeats", "Roundness", "Rotate", "Softness", "Roundness of the selected dot"]);
+    expect(labels("#dot-actions button")).toEqual(["Add a dot", "Remove the selected dot"]);
     click(document.querySelector('[data-name="Circle"]')!);
-    expect(byId("more").hidden).toBe(true);
+    expect(labels("#controls label")).toEqual(["Squash"]);
   });
 });
 
@@ -337,7 +322,7 @@ describe("the keyboard", () => {
 
   it("moves focus to the next usable button when the pressed one turns itself off", () => {
     click(document.querySelector('[data-name="Diamond"]')!);
-    const remove = () => Array.from(document.querySelectorAll<HTMLButtonElement>("#more-controls button")).find((b) => b.textContent === "Remove the selected dot")!;
+    const remove = () => Array.from(document.querySelectorAll<HTMLButtonElement>("#dot-actions button")).find((b) => b.textContent === "Remove the selected dot")!;
     remove().focus();
     click(remove());
     expect(remove().disabled).toBe(true);
@@ -345,7 +330,7 @@ describe("the keyboard", () => {
   });
 
   it("keeps focus on a button that changes the shape", () => {
-    const add = Array.from(document.querySelectorAll<HTMLButtonElement>("#more-controls button")).find((b) => b.textContent === "Add a dot")!;
+    const add = Array.from(document.querySelectorAll<HTMLButtonElement>("#dot-actions button")).find((b) => b.textContent === "Add a dot")!;
     add.focus();
     click(add);
     expect(document.activeElement?.textContent).toBe("Add a dot");

@@ -36,7 +36,6 @@
             <button class="small" id="reset" hidden>Reset</button>
           </div>
           <svg class="preview" id="preview" role="group" aria-label="Shape preview"></svg>
-          <button id="edit-points" class="small" aria-pressed="false">Edit points</button>
           <p class="hint" id="stage-hint">Dots define the construction pattern, before rounding. Drag a dot or use arrow keys; the pattern repeats around the centre.</p>
           <p class="error" id="error" role="status" hidden></p>
         </div>
@@ -45,11 +44,8 @@
       <section class="col-adjust" aria-labelledby="adjust-heading">
           <h2 id="adjust-heading">Adjust shape</h2>
           <div id="controls"></div>
+          <div id="dot-actions" class="buttons" aria-label="Edit dots"></div>
           <label class="colour"><input type="color" id="colour" value="#6750a4" /> Colour <span class="why">used in the preview and the exports</span></label>
-          <details id="more">
-            <summary>More options</summary>
-            <div id="more-controls"></div>
-          </details>
       </section>
       <section class="col-export" aria-labelledby="export-heading">
         <div class="export-heading">
