@@ -48,7 +48,7 @@ export function mountStudio(page: Document) {
     const usable = (e?: Element | null) => !!e && !(e as HTMLButtonElement).disabled;
     const target = Array.from(container.querySelectorAll<HTMLElement | SVGElement>("[data-focus]")).find((e) => e.dataset.focus === focused);
     const fallback = Array.from(target?.parentElement?.querySelectorAll<HTMLElement>("[data-focus]") ?? []).find(usable);
-    (usable(target) ? target : fallback)?.focus();
+    (usable(target) ? target : fallback)?.focus({ preventScroll: true });
   };
   const normalizedCubics = () => {
     try {
@@ -125,7 +125,8 @@ export function mountStudio(page: Document) {
   }
 
   function renderControls() {
-    $("shape-name").textContent = `· ${displayName(state.name)}${isEdited(state) ? " (edited)" : ""}`;
+    $("shape-name").textContent = displayName(state.name);
+    $("shape-status").textContent = isEdited(state) ? "Edited shape" : "Material original";
     $("reset").hidden = !isEdited(state);
     const main = $("controls");
     refill(main, () => mainControls(state).forEach((c) => controlRow(main, c)));
@@ -332,6 +333,8 @@ export function mountStudio(page: Document) {
   }
 
   function render() {
+    const view = page.defaultView;
+    const scroll = view && page.activeElement?.matches('input[type="range"]') ? [view.scrollX, view.scrollY] : null;
     renderPicker();
     renderControls();
     renderShape();
@@ -340,6 +343,7 @@ export function mountStudio(page: Document) {
     renderExport(cubics);
     ($("undo") as HTMLButtonElement).disabled = !history.canUndo;
     ($("redo") as HTMLButtonElement).disabled = !history.canRedo;
+    if (view && scroll && (view.scrollX !== scroll[0] || view.scrollY !== scroll[1])) view.scrollTo(scroll[0], scroll[1]);
   }
 
   const undo = () => {

@@ -10,42 +10,52 @@
   </head>
   <body>
     <header>
-      <h1>Material Shape Studio</h1>
-      <span class="tag">early version</span>
+      <div class="brand">
+        <h1>Material Shape Studio</h1>
+        <p>Pick a shape. Make it yours.</p>
+      </div>
       <span class="spacer"></span>
-      <button id="undo" title="Undo (Ctrl+Z)">Undo</button>
-      <button id="redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+      <div class="history" aria-label="Edit history">
+        <button id="undo" title="Undo (Ctrl+Z)">Undo</button>
+        <button id="redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+      </div>
     </header>
     <main>
-      <section class="col-picker card">
-        <h2>1 · Pick a Material shape</h2>
+      <section class="col-picker" aria-labelledby="pick-heading">
+        <div class="section-heading"><h2 id="pick-heading">Pick a shape</h2><span class="count">35</span></div>
         <div class="picker" id="picker"></div>
         <p class="caption" id="caption"></p>
       </section>
-      <section class="col-center">
+      <section class="col-center" aria-labelledby="shape-name">
         <div class="stage">
+          <div class="stage-heading">
+            <div><h2 id="shape-name"></h2><p class="shape-status" id="shape-status"></p></div>
+            <button class="small" id="reset" hidden>Reset</button>
+          </div>
           <svg class="preview" id="preview" role="group" aria-label="Shape preview"></svg>
           <p class="hint" id="stage-hint">Drag a dot to reshape. The whole pattern follows, because each dot repeats around the centre.</p>
           <p class="error" id="error" role="status" hidden></p>
-          <div class="in-use" id="in-use"></div>
+          <div class="in-use" id="in-use" aria-label="Shape in use"></div>
         </div>
-        <div class="card">
-          <h2>2 · Adjust <span class="name" id="shape-name"></span><button class="small" id="reset" hidden>Reset</button></h2>
+      </section>
+      <section class="col-adjust" aria-labelledby="adjust-heading">
+          <h2 id="adjust-heading">Adjust shape</h2>
           <div id="controls"></div>
           <label class="colour"><input type="color" id="colour" value="#6750a4" /> Colour <span class="why">used in the preview and the exports</span></label>
           <details id="more">
             <summary>More options</summary>
             <div id="more-controls"></div>
           </details>
-        </div>
       </section>
-      <section class="col-export card">
-        <h2>3 · Export</h2>
-        <div class="tabs" role="tablist" id="tabs">
+      <section class="col-export" aria-labelledby="export-heading">
+        <div class="export-heading">
+        <h2 id="export-heading">Take it into your app</h2>
+        <div class="tabs" role="tablist" aria-label="Export format" id="tabs">
           <button role="tab" data-tab="compose" aria-selected="true">Compose</button>
           <button role="tab" data-tab="svg" aria-selected="false">SVG</button>
           <button role="tab" data-tab="png" aria-selected="false">PNG</button>
           <button role="tab" data-tab="css" aria-selected="false">CSS</button>
+        </div>
         </div>
         <p class="about" id="export-about"></p>
         <div class="buttons" id="export-buttons"></div>

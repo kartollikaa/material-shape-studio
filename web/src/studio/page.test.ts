@@ -59,7 +59,7 @@ describe("the studio page", () => {
     for (const name of CATALOGUE_NAMES) {
       click(document.querySelector(`[data-name="${name}"]`)!);
       expect(thumbs().filter((t) => t.getAttribute("aria-pressed") === "true").map((t) => t.getAttribute("data-name")), name).toEqual([name]);
-      expect(byId("shape-name").textContent).toBe(`· ${displayName(name)}`);
+      expect(byId("shape-name").textContent).toBe(displayName(name));
     }
     click(document.querySelector('[data-name="Heart"]')!);
     expect(labels("#controls label")).toEqual(["Roundness", "Rotate"]);
@@ -88,7 +88,8 @@ describe("the studio page", () => {
     expect(byId("reset").hidden).toBe(true);
     slide("Rotate", 30);
     expect(byId("reset").hidden).toBe(false);
-    expect(byId("shape-name").textContent).toBe("· Cookie 4 Sided (edited)");
+    expect(byId("shape-name").textContent).toBe("Cookie 4 Sided");
+    expect(byId("shape-status").textContent).toBe("Edited shape");
     click(byId("undo"));
     expect(byId("reset").hidden).toBe(true);
     click(byId("redo"));
@@ -236,6 +237,25 @@ describe("the keyboard", () => {
     const before = position(selectedDot());
     press("ArrowRight", {}, slider("Rotate"));
     expect(position(selectedDot())).toEqual(before);
+  });
+
+  it("restores slider focus without asking the browser to scroll", () => {
+    slider("Rotate").focus();
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    slide("Rotate", 10);
+    expect(document.activeElement).toBe(slider("Rotate"));
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+  });
+
+  it("keeps Squash focused when flattening a circle introduces Rotate", () => {
+    click(document.querySelector('[data-name="Circle"]')!);
+    expect(labels("#controls label")).toEqual(["Squash"]);
+    slider("Squash").focus();
+    slide("Squash", 0.99);
+    expect(labels("#controls label")).toEqual(["Squash", "Rotate"]);
+    expect(document.activeElement).toBe(slider("Squash"));
+    slide("Squash", 0.98);
+    expect(slider("Squash").value).toBe("0.98");
   });
 
   it("moves focus to the next usable button when the pressed one turns itself off", () => {

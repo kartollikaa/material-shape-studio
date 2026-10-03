@@ -12,6 +12,10 @@ shapes, adjust it with a few plain sliders or by dragging its dots, see it on a 
 button and an avatar, and export it as Compose code, SVG, PNG or CSS. An untouched shape exports
 as Material's own `MaterialShapes` entry.
 
+The focused canvas keeps the catalogue on the left, the shape in the centre, and its controls on
+the right, with exports below. On smaller screens those sections stack. Adjustments keep keyboard
+focus and the page's scroll position, so editing a slider does not pull the page back up.
+
 Under it, the engine runs Google's `graphics-shapes` in the browser, so what you see is what
 Compose draws. Read in this order:
 

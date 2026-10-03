@@ -184,20 +184,25 @@ One page in three steps, framework-free TypeScript over the page's own markup in
 Every piece exists because one of the three jobs needs it: pick a shape, adjust it, take it into an
 app. It follows the system's light or dark setting.
 
-- **1 · Pick a Material shape**: the 35 catalogue shapes as thumbnails; hovering names one, and
+The focused canvas places the catalogue on the left, the preview in the centre, and adjustments on
+the right. Exports sit below the preview and adjustments. Smaller screens stack these sections in
+reading order. The canvas names the selected shape and distinguishes Material's original from an
+edited shape; Reset lives beside that name.
+
+- **Pick a shape**: the 35 catalogue shapes as thumbnails; hovering names one, and
   picking one replaces the current shape.
 - **Preview**: the shape at full size in the chosen colour. Polygon shapes show their slice's dots;
   dragging a dot moves that vertex, and the repeated pattern follows. Arrow keys nudge the selected
   dot, Shift for larger steps. Below it, **In use** shows the shape as a photo, an icon button and an
   avatar.
-- **2 · Adjust**: only the sliders that change the selected shape, each but Rotate with a one-line
+- **Adjust shape**: only the sliders that change the selected shape, each but Rotate with a one-line
   reason: Repeats for patterns that repeat, Points and Depth for stars, Sides for n-gons, Proportion
   for rectangles, Squash for circles, Roundness, and Rotate where it shows. Roundness scales every
   corner of Material's recipe together; sharp shapes start at 0%. Then Colour, used in the preview
   and the exports. **Reset** appears once the shape differs from Material's. **More options**,
   closed by default, holds Softness, the roundness of the selected dot, and adding or removing a
   dot; removal never leaves fewer than three corners or changes a one-off shape's repeats.
-- **3 · Export**: tabs for Compose, SVG, PNG and CSS (§7), each with a one-line description, its
+- **Take it into your app**: tabs for Compose, SVG, PNG and CSS (§7), each with a one-line description, its
   copy or download buttons, and the code where there is code.
 - **Undo and Redo** in the header, and Ctrl+Z / Ctrl+Shift+Z, step through every edit.
 
@@ -205,6 +210,11 @@ A document that cannot be built keeps the last good preview and says why under i
 that fails says so on its button. The studio works without a mouse: every control is a labelled
 native input that keeps focus while it changes the shape, Tab reaches each dot and selects it, and
 the arrow keys move between export tabs. Dragging dots is a second way in.
+
+Restoring focus after an edit never scrolls the page. The canvas reserves space for Reset and the
+dot hint, and the code preview keeps a stable height as a slider updates the export, so edits near
+the bottom do not jump the page upward. Slider commits also preserve the viewport when their edit
+adds or removes a control, such as Rotate appearing after a circle is squashed.
 
 ## 7. Exporters
 
