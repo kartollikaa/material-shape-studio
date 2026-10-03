@@ -34,8 +34,10 @@ export function mountStudio(page: Document) {
   let colour = "#6750a4";
   let tab: Tab = "compose";
   let dragging = false;
+  let editingPoints = false;
   let frozenBox: Box | null = null;
   let lastGood: Built | null = null;
+  let controlTimer: ReturnType<typeof setTimeout> | undefined;
   const history = new History();
   const remember = () => history.remember(snapshot(state));
   const buildDoc = (doc: ShapeDocument): Built => JSON.parse(build(JSON.stringify(doc)));
@@ -73,7 +75,13 @@ export function mountStudio(page: Document) {
         b.dataset.name = name;
         b.setAttribute("aria-label", displayName(name));
         svg("path", { d: thumbs[name].d }, svg("svg", { viewBox: thumbs[name].box, "aria-hidden": "true" }, b));
-        b.addEventListener("click", () => { remember(); state = pick(name); lastGood = null; render(); });
+        b.addEventListener("click", () => {
+          remember(); state = pick(name); lastGood = null; render();
+          if ($("change-shape").getAttribute("aria-expanded") === "true") {
+            $("change-shape").setAttribute("aria-expanded", "false");
+            $("change-shape").focus({ preventScroll: true });
+          }
+        });
         b.addEventListener("pointerenter", () => { $("caption").textContent = displayName(name); });
         b.addEventListener("pointerleave", () => { $("caption").textContent = `Selected: ${displayName(state.name)}`; });
         container.appendChild(b);
@@ -88,8 +96,12 @@ export function mountStudio(page: Document) {
     const id = `control-${container.id}-${container.childElementCount}`;
     const top = html("div", { className: "top" });
     const label = html("label", { htmlFor: id, textContent: c.label });
-    const out = html("output");
-    out.setAttribute("for", id);
+    const scale = c.scale ?? 1;
+    const value = html("input", { type: "number", min: String(c.min * scale), max: String(c.max * scale), step: String(c.step * scale) });
+    value.setAttribute("aria-label", `${c.label} value`);
+    value.dataset.focus = `value:${c.label}`;
+    const out = html("span", { className: "control-value" });
+    out.append(value, html("span", { textContent: c.unit ?? "" }));
     top.append(label, out);
     wrap.appendChild(top);
     const range = html("input", { type: "range", id, min: String(c.min), max: String(c.max), step: String(c.step) });
@@ -97,9 +109,10 @@ export function mountStudio(page: Document) {
     if (c.why) {
       wrap.appendChild(html("p", { className: "why", id: `${id}-why`, textContent: c.why }));
       range.setAttribute("aria-describedby", `${id}-why`);
+      value.setAttribute("aria-describedby", `${id}-why`);
     }
     const show = (v: number) => {
-      out.textContent = c.show(v);
+      value.value = String(round3(v * scale));
       range.setAttribute("aria-valuetext", c.show(v));
     };
     range.value = String(c.get());
@@ -113,6 +126,17 @@ export function mountStudio(page: Document) {
       renderLive();
     });
     range.addEventListener("change", () => { started = false; render(); });
+    const commitValue = (deferRender = false) => {
+      if (!value.value || !Number.isFinite(value.valueAsNumber)) { show(c.get()); return; }
+      const bounded = Math.max(c.min, Math.min(c.max, value.valueAsNumber / scale));
+      const next = round3(c.min + Math.round((bounded - c.min) / c.step) * c.step);
+      if (next !== c.get()) { remember(); c.set(next); }
+      clearTimeout(controlTimer);
+      if (deferRender) controlTimer = setTimeout(render, 0);
+      else render();
+    };
+    value.addEventListener("change", () => commitValue(true));
+    value.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitValue(); } });
     wrap.appendChild(range);
     container.appendChild(wrap);
   }
@@ -136,17 +160,17 @@ export function mountStudio(page: Document) {
         const space = html("div", { className: "control control-space" });
         space.setAttribute("aria-hidden", "true");
         const top = html("div", { className: "top" });
-        top.appendChild(html("span", { textContent: "Rotate" }));
+        top.append(html("span", { textContent: "Rotate" }), html("input", { type: "number", disabled: true }));
         space.append(top, html("input", { type: "range", disabled: true }));
         main.appendChild(space);
       }
     });
     const more = $("more-controls");
-    const extra = moreControls(state);
+    const extra = moreControls(state).filter((c) => editingPoints || c.label !== "Roundness of the selected dot");
     const polygon = state.doc.shape.kind === "polygon";
     refill(more, () => {
       extra.forEach((c) => controlRow(more, c));
-      if (!polygon) return;
+      if (!polygon || !editingPoints) return;
       const buttons = html("div", { className: "buttons" });
       actionButton(buttons, "Add a dot", () => addDot(state));
       actionButton(buttons, "Remove the selected dot", () => removeDot(state), !canRemoveDot(state));
@@ -177,13 +201,20 @@ export function mountStudio(page: Document) {
     const transforms = viewTransforms(state.doc);
     const built = buildPreview(transforms);
     const shape = state.doc.shape;
-    const dots = built && shape.kind === "polygon" ? shape.vertices.map((p) => forward(p, transforms)) : [];
+    const dots = built && editingPoints && shape.kind === "polygon" ? shape.vertices.map((p) => forward(p, transforms)) : [];
+    $("edit-points").hidden = shape.kind !== "polygon";
+    $("edit-points").setAttribute("aria-pressed", String(editingPoints));
     refill(preview, () => {
       if (!built) return;
       const box = dragging && frozenBox ? frozenBox : squareAround(built.bounds, dots);
       frozenBox = box;
       preview.setAttribute("viewBox", box.join(" "));
       svg("path", { d: pathOf(built.cubics), fill: colour }, preview);
+      if (dots.length) svg("polyline", { class: "construction", points: dots.map((p) => p.join(",")).join(" "), "aria-hidden": "true" }, preview);
+      dots.forEach(([x, y], i) => {
+        const target = svg("circle", { cx: x, cy: y, r: box[2] * 0.02, class: "dot-target", "aria-hidden": "true" }, preview);
+        target.addEventListener("pointerdown", (e) => startDrag(e as PointerEvent, i));
+      });
       dots.forEach(([x, y], i) => {
         const dot = svg("circle", {
           cx: x, cy: y, r: box[2] * 0.02, class: `dot${i === state.selected ? " selected" : ""}`,
@@ -330,6 +361,7 @@ export function mountStudio(page: Document) {
       buttons.appendChild(b);
     }));
     $("export-code").textContent = cubics ? current.code(cubics) : "";
+    $("code-details").hidden = tab === "png";
   }
 
   let liveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -345,7 +377,7 @@ export function mountStudio(page: Document) {
 
   function render() {
     const view = page.defaultView;
-    const scroll = view && page.activeElement?.matches('input[type="range"]') ? [view.scrollX, view.scrollY] : null;
+    const scroll = view && page.activeElement?.matches('input[type="range"], input[type="number"]') ? [view.scrollX, view.scrollY] : null;
     renderPicker();
     renderControls();
     renderShape();
@@ -369,6 +401,11 @@ export function mountStudio(page: Document) {
   };
 
   $("undo").addEventListener("click", undo);
+  $("change-shape").addEventListener("click", () => {
+    const button = $("change-shape");
+    button.setAttribute("aria-expanded", String(button.getAttribute("aria-expanded") !== "true"));
+  });
+  $("edit-points").addEventListener("click", () => { editingPoints = !editingPoints; render(); });
   $("redo").addEventListener("click", redo);
   $("reset").addEventListener("click", () => { remember(); state = pick(state.name); lastGood = null; render(); });
   $("colour").addEventListener("input", (e) => { colour = (e.target as HTMLInputElement).value; renderLive(); });
@@ -395,7 +432,7 @@ export function mountStudio(page: Document) {
       return;
     }
     const shape = state.doc.shape;
-    if (shape.kind !== "polygon" || (e.target as HTMLElement).closest?.("input, textarea, select, pre, [role=tab]")) return;
+    if (!editingPoints || shape.kind !== "polygon" || (e.target as HTMLElement).closest?.("input, textarea, select, pre, [role=tab]")) return;
     const step = e.shiftKey ? 0.05 : 0.005;
     const delta = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] } as Record<string, [number, number]>)[e.key];
     if (!delta) return;
@@ -412,6 +449,7 @@ export function mountStudio(page: Document) {
   $("engine-version").textContent = versions.graphicsShapes;
   render();
   return () => {
+    clearTimeout(controlTimer);
     clearTimeout(liveTimer);
     page.defaultView?.removeEventListener("keydown", onKey);
   };

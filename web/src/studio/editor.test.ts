@@ -25,7 +25,7 @@ const PROTOTYPE_CONTROLS: Record<string, string> = {
 // From the prototype: why, min, max, step, and one value with how it is shown.
 const PROTOTYPE_RANGES: Record<string, [string, number, number, number, [number, string]]> = {
   Repeats: ["How many times the pattern goes around the centre.", 2, 16, 1, [6, "6"]],
-  Roundness: ["How rounded the corners are.", 0, 2.5, 0.01, [0.5, "50%"]],
+  Roundness: ["100% keeps Material’s original corner recipe. Originally sharp shapes start at 0%.", 0, 2.5, 0.01, [0.5, "50%"]],
   Points: ["How many points the shape has.", 3, 20, 1, [7, "7"]],
   Depth: ["How deep the dips between the points go.", 0.05, 0.9, 0.01, [0.25, "25%"]],
   Sides: ["How many corners the shape has.", 3, 12, 1, [5, "5"]],

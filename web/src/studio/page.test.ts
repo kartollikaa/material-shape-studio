@@ -20,7 +20,7 @@ const labels = (selector: string) => Array.from(document.querySelectorAll(select
 const exportCode = () => byId("export-code").textContent ?? "";
 const openTab = (name: string) => click(document.querySelector(`[data-tab=${name}]`)!);
 const slider = (label: string) =>
-  Array.from(document.querySelectorAll("#controls .control")).find((c) => c.querySelector("label")?.textContent === label)!.querySelector("input")!;
+  Array.from(document.querySelectorAll("#controls .control")).find((c) => c.querySelector("label")?.textContent === label)!.querySelector<HTMLInputElement>('input[type="range"]')!;
 function drag(label: string, value: number) {
   const input = slider(label);
   input.value = String(value);
@@ -42,6 +42,7 @@ let dispose: () => void;
 beforeEach(() => {
   document.body.innerHTML = body;
   dispose = mountStudio(document);
+  click(byId("edit-points"));
 });
 afterEach(() => {
   dispose();
@@ -51,6 +52,79 @@ afterEach(() => {
 });
 
 describe("the studio page", () => {
+  it("starts with a clean canvas and no point-specific controls", () => {
+    dispose();
+    document.body.innerHTML = body;
+    dispose = mountStudio(document);
+    expect(byId("edit-points").getAttribute("aria-pressed")).toBe("false");
+    expect(dots()).toHaveLength(0);
+    expect(labels("#more-controls label")).toEqual(["Softness"]);
+    expect(labels("#more-controls button")).toEqual([]);
+  });
+
+  it("closes the compact picker and returns focus after selecting a shape", () => {
+    click(byId("change-shape"));
+    expect(byId("change-shape").getAttribute("aria-expanded")).toBe("true");
+    click(document.querySelector('[data-name="Heart"]')!);
+    expect(byId("change-shape").getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(byId("change-shape"));
+    expect(byId("shape-name").textContent).toBe("Heart");
+  });
+
+  it("makes point editing optional without changing the shape", () => {
+    const before = exportCode();
+    click(byId("edit-points"));
+    expect(dots()).toHaveLength(0);
+    press("ArrowRight");
+    expect(exportCode()).toBe(before);
+    click(byId("edit-points"));
+    expect(dots()).toHaveLength(2);
+    expect(document.querySelector(".construction")).not.toBeNull();
+  });
+
+  it("accepts displayed numeric units, clamps values, and restores numeric focus", () => {
+    vi.useFakeTimers();
+    const value = () => document.querySelector<HTMLInputElement>('[aria-label="Roundness value"]')!;
+    expect(value().value).toBe("100");
+    value().focus();
+    value().value = "125";
+    value().dispatchEvent(new Event("change"));
+    vi.runOnlyPendingTimers();
+    expect(slider("Roundness").value).toBe("1.25");
+    expect(document.activeElement).toBe(value());
+    click(byId("undo"));
+    expect(value().value).toBe("100");
+    value().value = "999";
+    value().dispatchEvent(new Event("change"));
+    vi.runOnlyPendingTimers();
+    expect(value().value).toBe("250");
+    value().value = "";
+    value().dispatchEvent(new Event("change"));
+    vi.runOnlyPendingTimers();
+    expect(value().value).toBe("250");
+  });
+
+  it("lets native Tab move focus before rebuilding numeric controls", () => {
+    vi.useFakeTimers();
+    const value = document.querySelector<HTMLInputElement>('[aria-label="Rotate value"]')!;
+    value.focus();
+    value.value = "45";
+    value.dispatchEvent(new Event("change"));
+    expect(value.isConnected).toBe(true);
+    slider("Rotate").focus();
+    vi.runOnlyPendingTimers();
+    expect(document.activeElement).toBe(slider("Rotate"));
+    expect(slider("Rotate").value).toBe("45");
+  });
+
+  it("keeps code optional and omits the disclosure for PNG", () => {
+    expect((byId("code-details") as HTMLDetailsElement).open).toBe(false);
+    expect(exportCode()).toContain("MaterialShapes");
+    openTab("png");
+    expect(byId("code-details").hidden).toBe(true);
+    openTab("svg");
+    expect(byId("code-details").hidden).toBe(false);
+  });
   it("offers the 35 Material shapes as named buttons, and picking one selects and names it", () => {
     const thumbs = () => Array.from(document.querySelectorAll("#picker .thumb"));
     expect(thumbs().map((t) => [t.tagName, t.getAttribute("aria-label")])).toEqual(CATALOGUE_NAMES.map((n) => ["BUTTON", displayName(n)]));
@@ -300,6 +374,12 @@ describe("the keyboard", () => {
 });
 
 describe("dragging a dot", () => {
+  it("selects a dot through its larger pointer target", () => {
+    document.querySelectorAll(".dot-target")[1].dispatchEvent(new Event("pointerdown"));
+    byId("preview").dispatchEvent(new Event("pointerup"));
+    expect(dots()[1].classList.contains("selected")).toBe(true);
+    expect(undoButton().disabled).toBe(true);
+  });
   it("adds no undo step for a press that moves nothing", () => {
     dots()[1].dispatchEvent(new Event("pointerdown"));
     byId("preview").dispatchEvent(new Event("pointerup"));

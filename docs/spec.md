@@ -185,23 +185,30 @@ Every piece exists because one of the three jobs needs it: pick a shape, adjust 
 app. It follows the system's light or dark setting.
 
 The focused canvas places the catalogue on the left, the preview in the centre, and adjustments on
-the right. Exports sit below the preview and adjustments. Smaller screens stack these sections in
-reading order. The canvas names the selected shape and distinguishes Material's original from an
+the right. Export actions sit below the adjustments, with full code behind **Show code**. Smaller
+screens stack these sections in reading order. On phones, **Change shape** toggles the catalogue;
+picking a shape closes it and returns focus to the toggle. The compact canvas stays visible while
+adjustments scroll. The canvas names the selected shape and distinguishes Material's original from an
 edited shape; Reset lives beside that name.
 
 - **Pick a shape**: the 35 catalogue shapes as thumbnails; hovering names one, and
   picking one replaces the current shape.
-- **Preview**: the shape at full size in the chosen colour. Polygon shapes show their slice's dots;
+- **Preview**: the shape at full size in the chosen colour. **Edit points** toggles a polygon's
+  slice dots and faint construction guides, explaining vertices outside the rounded outline;
   dragging a dot moves that vertex, and the repeated pattern follows. Arrow keys nudge the selected
-  dot, Shift for larger steps. Below it, **In use** shows the shape as a photo, an icon button and an
+  dot, Shift for larger steps. Transparent pointer targets extend beyond the visible dots without
+  shrinking with the preview. Below it, **In use** shows the shape as a photo, an icon button and an
   avatar.
-- **Adjust shape**: only the sliders that change the selected shape, each but Rotate with a one-line
+- **Adjust shape**: sliders and editable numeric values that change the selected shape. Numeric
+  values use the displayed units, commit on Enter or blur, clamp to the control's range, and
+  reject empty values without changing the shape. Each control but Rotate includes a short
   reason: Repeats for patterns that repeat, Points and Depth for stars, Sides for n-gons, Proportion
   for rectangles, Squash for circles, Roundness, and Rotate where it shows. Roundness scales every
   corner of Material's recipe together; sharp shapes start at 0%. Then Colour, used in the preview
   and the exports. **Reset** appears once the shape differs from Material's. **More options**,
   closed by default, holds Softness, the roundness of the selected dot, and adding or removing a
-  dot; removal never leaves fewer than three corners or changes a one-off shape's repeats.
+  dot. Dot-specific controls appear only in **Edit points** mode; removal never leaves fewer than
+  three corners or changes a one-off shape's repeats.
 - **Take it into your app**: tabs for Compose, SVG, PNG and CSS (§7), each with a one-line description, its
   copy or download buttons, and the code where there is code.
 - **Undo and Redo** in the header, and Ctrl+Z / Ctrl+Shift+Z, step through every edit.
@@ -215,7 +222,9 @@ Restoring focus after an edit never scrolls the page. The canvas reserves space 
 dot hint, and the code preview keeps a stable height as a slider updates the export, so edits near
 the bottom do not jump the page upward. Circle adjustments reserve space for Rotate while it is
 unavailable, so introducing or removing it does not change the page height. Slider commits also
-preserve the viewport when their edit changes the controls.
+preserve the viewport when their edit changes the controls, as do numeric value commits.
+Numeric blur commits allow native focus navigation to finish before rebuilding controls, so Tab
+continues to the next input instead of losing focus when its previous input is replaced.
 
 ## 7. Exporters
 

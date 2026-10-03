@@ -13,8 +13,11 @@ button and an avatar, and export it as Compose code, SVG, PNG or CSS. An untouch
 as Material's own `MaterialShapes` entry.
 
 The focused canvas keeps the catalogue on the left, the shape in the centre, and its controls on
-the right, with exports below. On smaller screens those sections stack. Adjustments keep keyboard
-focus and the page's scroll position, so editing a slider does not pull the page back up.
+the right, with export actions beside the editor and full code behind **Show code**. On phones,
+**Change shape** opens the catalogue and a compact preview stays visible during adjustment.
+Enable **Edit points** to see the construction dots and guides. Slider values are also editable:
+type an angle or percentage directly. Adjustments keep keyboard focus and the page's scroll
+position, so editing a value does not pull the page back up.
 
 Under it, the engine runs Google's `graphics-shapes` in the browser, so what you see is what
 Compose draws. Read in this order:

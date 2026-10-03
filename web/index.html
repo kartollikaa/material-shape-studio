@@ -22,9 +22,12 @@
     </header>
     <main>
       <section class="col-picker" aria-labelledby="pick-heading">
+        <button id="change-shape" aria-expanded="false" aria-controls="shape-catalogue">Change shape</button>
+        <div id="shape-catalogue">
         <div class="section-heading"><h2 id="pick-heading">Pick a shape</h2><span class="count">35</span></div>
         <div class="picker" id="picker"></div>
         <p class="caption" id="caption"></p>
+        </div>
       </section>
       <section class="col-center" aria-labelledby="shape-name">
         <div class="stage">
@@ -33,10 +36,11 @@
             <button class="small" id="reset" hidden>Reset</button>
           </div>
           <svg class="preview" id="preview" role="group" aria-label="Shape preview"></svg>
-          <p class="hint" id="stage-hint">Drag a dot to reshape. The whole pattern follows, because each dot repeats around the centre.</p>
+          <button id="edit-points" class="small" aria-pressed="false">Edit points</button>
+          <p class="hint" id="stage-hint">Dots define the construction pattern, before rounding. Drag a dot or use arrow keys; the pattern repeats around the centre.</p>
           <p class="error" id="error" role="status" hidden></p>
-          <div class="in-use" id="in-use" aria-label="Shape in use"></div>
         </div>
+        <div class="in-use" id="in-use" aria-label="Shape in use"></div>
       </section>
       <section class="col-adjust" aria-labelledby="adjust-heading">
           <h2 id="adjust-heading">Adjust shape</h2>
@@ -59,7 +63,7 @@
         </div>
         <p class="about" id="export-about"></p>
         <div class="buttons" id="export-buttons"></div>
-        <pre id="export-code" aria-label="Exported code"></pre>
+        <details id="code-details"><summary>Show code</summary><pre id="export-code" aria-label="Exported code"></pre></details>
       </section>
     </main>
     <footer>
