@@ -19,6 +19,13 @@ Construction dots and guides are available immediately on polygon shapes. Slider
 type an angle or percentage directly. Adjustments keep keyboard focus and the page's scroll
 position, so editing a value does not pull the page back up.
 
+The browser address updates automatically as you edit. Copy its URL to share or save the shape:
+opening it restores the adjustments, edited dots, colour and export tab. Named parameters such as
+`#shape=Heart&rotate=45&roundness=125&colour=123456&tab=svg` can be edited directly in the address bar.
+Values use the controls' displayed units; custom dot geometry is included as JSON when needed.
+No account or server is needed. An invalid link opens the default shape with a
+dismissible notice.
+
 Under it, the engine runs Google's `graphics-shapes` in the browser, so what you see is what
 Compose draws. Read in this order:
 

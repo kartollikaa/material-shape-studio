@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
 import { svgPath } from "../export/svg";
 import { displayName, mountStudio } from "./page";
+import { decodeState } from "./url-state";
 
 vi.mock("@material-shape-studio/engine", async (importOriginal) => {
   const engine = await importOriginal<typeof import("@material-shape-studio/engine")>();
@@ -40,8 +41,126 @@ const undoButton = () => byId("undo") as HTMLButtonElement;
 
 let dispose: () => void;
 beforeEach(() => {
+  window.history.replaceState(null, "", "/");
   document.body.innerHTML = body;
   dispose = mountStudio(document);
+});
+
+describe("the browser address", () => {
+  it("automatically carries live edits, colour and export format into a reopened editor", async () => {
+    click(document.querySelector('[data-name="Heart"]')!);
+    drag("Rotate", 45);
+    drag("Roundness", 1.25);
+    const colour = byId("colour") as HTMLInputElement;
+    colour.value = "#123456";
+    colour.dispatchEvent(new Event("input"));
+    openTab("svg");
+    await vi.waitFor(() => expect(window.location.hash).toContain("shape=Heart"));
+    expect(window.location.hash).toContain("rotate=45");
+    expect(window.location.hash).toContain("roundness=125");
+    await vi.waitFor(async () => expect((await decodeState(window.location.hash.slice(1))).tab).toBe("svg"));
+    const address = window.location.href;
+    const path = document.querySelector("#preview path")!.getAttribute("d");
+    const code = exportCode();
+    dispose();
+    document.body.innerHTML = body;
+    window.history.replaceState(null, "", address);
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Heart"));
+    expect(slider("Rotate").value).toBe("45");
+    expect(slider("Roundness").value).toBe("1.25");
+    expect((byId("colour") as HTMLInputElement).value).toBe("#123456");
+    expect(document.querySelector('[data-tab="svg"]')!.getAttribute("aria-selected")).toBe("true");
+    expect(document.querySelector("#preview path")!.getAttribute("d")).toBe(path);
+    expect(exportCode()).toBe(code);
+    slide("Roundness", 1.5);
+    expect(slider("Roundness").value).toBe("1.5");
+  });
+
+  it("updates the address after undo, redo and reset without adding browser history entries", async () => {
+    const length = window.history.length;
+    slide("Rotate", 30);
+    await vi.waitFor(() => expect(window.location.hash).not.toBe(""));
+    const edited = window.location.hash;
+    click(byId("undo"));
+    await vi.waitFor(() => expect(window.location.hash).not.toBe(edited));
+    const original = window.location.hash;
+    click(byId("redo"));
+    await vi.waitFor(() => expect(window.location.hash).toBe(edited));
+    click(byId("reset"));
+    await vi.waitFor(() => expect(window.location.hash).toBe(original));
+    expect(window.history.length).toBe(length);
+  });
+
+  it("keeps the last rapid edit in the address and preserves moved and added dots", async () => {
+    for (let angle = 1; angle <= 30; angle++) drag("Rotate", angle);
+    click(document.querySelector("#dot-actions button")!);
+    press("ArrowRight", { shiftKey: true });
+    await vi.waitFor(async () => {
+      const saved = await decodeState(window.location.hash.slice(1));
+      expect(saved.editor.doc.transforms).toContainEqual({ type: "rotate", degrees: 30 });
+      expect(saved.editor.selected).toBe(1);
+      expect(saved.editor.doc.shape.kind).toBe("polygon");
+      if (saved.editor.doc.shape.kind === "polygon") expect(saved.editor.doc.shape.vertices).toHaveLength(3);
+    });
+    const path = document.querySelector("#preview path")!.getAttribute("d");
+    const dot = position(selectedDot());
+    dispose();
+    document.body.innerHTML = body;
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(dots()).toHaveLength(3));
+    expect(document.querySelector("#preview path")!.getAttribute("d")).toBe(path);
+    expect(position(selectedDot())).toEqual(dot);
+  });
+
+  it("opens a corrupt address with a usable default shape and a dismissible notice", async () => {
+    dispose();
+    window.history.replaceState(null, "", "#doc=broken");
+    document.body.innerHTML = body;
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(document.querySelector('[data-url-notice]')).not.toBeNull());
+    expect(byId("shape-name").textContent).toBe("Cookie 4 Sided");
+    click(document.querySelector('[data-url-notice] button')!);
+    expect(document.querySelector('[data-url-notice]')).toBeNull();
+    slide("Rotate", 30);
+    expect(slider("Rotate").value).toBe("30");
+  });
+
+  it("restores the default when a corrupt link replaces the hash in an open editor", async () => {
+    click(document.querySelector('[data-name="Heart"]')!);
+    slide("Rotate", 45);
+    window.history.replaceState(null, "", "#doc=broken");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await vi.waitFor(() => expect(document.querySelector('[data-url-notice]')).not.toBeNull());
+    expect(byId("shape-name").textContent).toBe("Cookie 4 Sided");
+    expect(slider("Rotate").value).toBe("0");
+  });
+
+  it("applies a value edited directly in the address bar", async () => {
+    slide("Rotate", 30);
+    await vi.waitFor(() => expect(window.location.hash).toContain("rotate=30"));
+    window.history.replaceState(null, "", window.location.hash.replace("rotate=30", "rotate=75"));
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await vi.waitFor(() => expect(slider("Rotate").value).toBe("75"));
+  });
+
+  it("clears a bad-link notice when the address is corrected", () => {
+    window.history.replaceState(null, "", "#broken");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(document.querySelector("[data-url-notice]")).not.toBeNull();
+    window.history.replaceState(null, "", "#shape=Heart&rotate=75");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(slider("Rotate").value).toBe("75");
+    expect(document.querySelector("[data-url-notice]")).toBeNull();
+  });
+
+  it("updates the address immediately when a numeric edit defers rendering to preserve focus", () => {
+    vi.useFakeTimers();
+    const value = document.querySelector<HTMLInputElement>('[aria-label="Rotate value"]')!;
+    value.value = "45";
+    value.dispatchEvent(new Event("change"));
+    expect(window.location.hash).toContain("rotate=45");
+  });
 });
 afterEach(() => {
   dispose();

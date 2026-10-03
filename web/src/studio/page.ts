@@ -9,6 +9,7 @@ import {
   viewTransforms, type Control, type EditorState,
 } from "./editor";
 import { backward, forward, squareAround, type Box } from "./geometry";
+import { syncAddress } from "./url-state";
 
 type Tab = "compose" | "svg" | "png" | "css";
 type Built = { cubics: number[]; bounds: [number, number, number, number] };
@@ -33,11 +34,12 @@ export function mountStudio(page: Document) {
   let state: EditorState = pick("Cookie4Sided");
   let colour = "#6750a4";
   let tab: Tab = "compose";
+  let address: ReturnType<typeof syncAddress> | undefined;
   let dragging = false;
   let frozenBox: Box | null = null;
   let lastGood: Built | null = null;
   let controlTimer: ReturnType<typeof setTimeout> | undefined;
-  const history = new History();
+  let history = new History();
   const remember = () => history.remember(snapshot(state));
   const buildDoc = (doc: ShapeDocument): Built => JSON.parse(build(JSON.stringify(doc)));
   const pathOf = (cubics: ArrayLike<number>) => svgPath(cubics, 1, 4);
@@ -130,6 +132,7 @@ export function mountStudio(page: Document) {
       const bounded = Math.max(c.min, Math.min(c.max, value.valueAsNumber / scale));
       const next = round3(c.min + Math.round((bounded - c.min) / c.step) * c.step);
       if (next !== c.get()) { remember(); c.set(next); }
+      updateAddress();
       clearTimeout(controlTimer);
       if (deferRender) controlTimer = setTimeout(render, 0);
       else render();
@@ -359,6 +362,7 @@ export function mountStudio(page: Document) {
 
   let liveTimer: ReturnType<typeof setTimeout> | undefined;
   function renderLive() {
+    updateAddress();
     renderShape();
     clearTimeout(liveTimer);
     liveTimer = setTimeout(() => {
@@ -369,6 +373,7 @@ export function mountStudio(page: Document) {
   }
 
   function render() {
+    updateAddress();
     const view = page.defaultView;
     const scroll = view && page.activeElement?.matches('input[type="range"], input[type="number"]') ? [view.scrollX, view.scrollY] : null;
     renderPicker();
@@ -406,6 +411,7 @@ export function mountStudio(page: Document) {
     if (!chosen) return;
     tab = chosen;
     renderExport(normalizedCubics());
+    updateAddress();
   });
   $("tabs").addEventListener("keydown", (e) => {
     const step = ({ ArrowLeft: -1, ArrowRight: 1 } as Record<string, number>)[e.key];
@@ -440,7 +446,31 @@ export function mountStudio(page: Document) {
   const versions = JSON.parse(version());
   $("engine-version").textContent = versions.graphicsShapes;
   render();
+  function updateAddress() {
+    address?.update({ v: 1, editor: state, colour, tab });
+  }
+  const view = page.defaultView;
+  if (view) address = syncAddress(view, { v: 1, editor: state, colour, tab }, (saved) => {
+    page.querySelector("[data-url-notice]")?.remove();
+    history = new History();
+    state = saved.editor;
+    colour = saved.colour;
+    tab = saved.tab;
+    ($("colour") as HTMLInputElement).value = colour;
+    lastGood = null;
+    render();
+  }, (message) => {
+    page.querySelector("[data-url-notice]")?.remove();
+    const notice = html("div", { className: "error" });
+    notice.dataset.urlNotice = "";
+    notice.setAttribute("role", "status");
+    const dismiss = html("button", { textContent: "Dismiss" });
+    dismiss.addEventListener("click", () => notice.remove());
+    notice.append(html("p", { textContent: message }), dismiss);
+    page.querySelector("header")?.after(notice);
+  });
   return () => {
+    address?.dispose();
     clearTimeout(controlTimer);
     clearTimeout(liveTimer);
     page.defaultView?.removeEventListener("keydown", onKey);
