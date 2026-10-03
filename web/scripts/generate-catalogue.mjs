@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const COMMIT = "080d2b3e5326ba80392d93442c4a51a02dc22650";
 const PATH = "compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/MaterialShapes.kt";
-const OUTPUT = new URL("../src/catalogue/catalogue.json", import.meta.url);
+const OUTPUT = new URL("../../packages/core/src/catalogue/catalogue.json", import.meta.url);
 
 async function upstream() {
   const response = await fetch(`https://raw.githubusercontent.com/androidx/androidx/${COMMIT}/${PATH}`);

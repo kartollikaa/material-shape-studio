@@ -13,7 +13,8 @@
     "round-trip": "UPDATE_ROUND_TRIP=1 vitest run src/export/round-trip.test.ts"
   },
   "dependencies": {
-    "@material-shape-studio/engine": "^0.1.0"
+    "@material-shape-studio/engine": "^0.1.0",
+    "@material-shape-studio/core": "^0.1.0"
   },
   "devDependencies": {
     "jsdom": "^30.1.1",

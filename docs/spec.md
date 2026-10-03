@@ -39,11 +39,12 @@ engine/                 Gradle, Kotlin Multiplatform: jvm() + js()
   fixtures/             committed golden cubics, one JSON per document
 packages/engine/        npm package @material-shape-studio/engine; dist/ is copied from the
                         Kotlin/JS build (ES module + .d.mts), never committed
+packages/core/          shared shape documents, generated catalogue, pure exporters, and share codec
 web/                    Vite + TypeScript, no UI framework; workspace member depending on the package above
   scripts/              generate-catalogue.mjs: the 35 MaterialShapes from Compose's source
-  src/document.ts       the shape document types
-  src/catalogue/        the generated catalogue data
-  src/export/           one module per target, pure functions from a document or its cubics to text
+  src/document.ts       compatibility re-export of shared shape document types
+  src/catalogue/        compatibility re-export of the shared catalogue data
+  src/export/           compatibility re-exports and the Kotlin round-trip test
   src/studio/           editor state and controls (editor.ts), dot geometry, and the page (page.ts)
 .github/workflows       ci.yml (every PR), deploy.yml (main -> GitHub Pages)
 ```
@@ -219,7 +220,7 @@ preserve the viewport when their edit changes the controls.
 
 ## 7. Exporters
 
-Exporters are pure functions in `web/src/export/`, one module per target, taking a document or its
+Exporters are pure functions in `packages/core/src/export/`, one module per target, taking a document or its
 normalized cubics and returning text:
 
 | Target | Emits |

@@ -42,7 +42,7 @@ module with TypeScript declarations into `packages/engine/dist`.
 npm ci
 ```
 
-Installs the npm workspaces: `packages/engine` and `web`.
+Installs the npm workspaces: `packages/engine`, `packages/core`, and `web`.
 
 ```bash
 npm test
@@ -68,8 +68,12 @@ Starts the studio on a local development server.
 npm run catalogue -w web
 ```
 
-Regenerates `web/src/catalogue/catalogue.json` from Compose's `MaterialShapes.kt` at the pinned
+Regenerates `packages/core/src/catalogue/catalogue.json` from Compose's `MaterialShapes.kt` at the pinned
 androidx commit in `web/scripts/generate-catalogue.mjs`. Change the commit there to follow upstream.
+
+## The shared package
+
+`@material-shape-studio/core` owns the versioned shape document, generated catalogue, pure Compose/SVG/CSS exporters, and the browser-compatible share-link codec. The Studio imports them through this package. The codec carries a complete document and presentation fields in a compressed `#doc=` fragment. It bounds the compressed and decompressed payload before parsing. Engine validation still decides whether a shape's geometry is valid.
 
 ## The engine package
 
