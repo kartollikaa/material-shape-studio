@@ -55,7 +55,7 @@ describe("the studio page", () => {
     expect(byId("edit-points")).toBeNull();
     expect(dots()).toHaveLength(2);
     expect(labels("#more-controls label")).toEqual(["Softness", "Roundness of the selected dot"]);
-    expect(labels("#more-controls button")).toEqual(["Add a dot", "Remove the selected dot"]);
+    expect(labels("#dot-actions button")).toEqual(["Add a dot", "Remove the selected dot"]);
   });
 
   it("closes the compact picker and returns focus after selecting a shape", () => {
@@ -213,7 +213,7 @@ describe("the studio page", () => {
   it("keeps More options for shapes that have them", () => {
     expect(byId("more").hidden).toBe(false);
     expect(labels("#more-controls label")).toEqual(["Softness", "Roundness of the selected dot"]);
-    expect(labels("#more-controls button")).toEqual(["Add a dot", "Remove the selected dot"]);
+    expect(labels("#dot-actions button")).toEqual(["Add a dot", "Remove the selected dot"]);
     click(document.querySelector('[data-name="Circle"]')!);
     expect(byId("more").hidden).toBe(true);
   });
@@ -322,7 +322,7 @@ describe("the keyboard", () => {
 
   it("moves focus to the next usable button when the pressed one turns itself off", () => {
     click(document.querySelector('[data-name="Diamond"]')!);
-    const remove = () => Array.from(document.querySelectorAll<HTMLButtonElement>("#more-controls button")).find((b) => b.textContent === "Remove the selected dot")!;
+    const remove = () => Array.from(document.querySelectorAll<HTMLButtonElement>("#dot-actions button")).find((b) => b.textContent === "Remove the selected dot")!;
     remove().focus();
     click(remove());
     expect(remove().disabled).toBe(true);
@@ -330,7 +330,7 @@ describe("the keyboard", () => {
   });
 
   it("keeps focus on a button that changes the shape", () => {
-    const add = Array.from(document.querySelectorAll<HTMLButtonElement>("#more-controls button")).find((b) => b.textContent === "Add a dot")!;
+    const add = Array.from(document.querySelectorAll<HTMLButtonElement>("#dot-actions button")).find((b) => b.textContent === "Add a dot")!;
     add.focus();
     click(add);
     expect(document.activeElement?.textContent).toBe("Add a dot");

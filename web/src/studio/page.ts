@@ -169,11 +169,13 @@ export function mountStudio(page: Document) {
     const polygon = state.doc.shape.kind === "polygon";
     refill(more, () => {
       extra.forEach((c) => controlRow(more, c));
+    });
+    const buttons = $("dot-actions");
+    buttons.hidden = !polygon;
+    refill(buttons, () => {
       if (!polygon) return;
-      const buttons = html("div", { className: "buttons" });
       actionButton(buttons, "Add a dot", () => addDot(state));
       actionButton(buttons, "Remove the selected dot", () => removeDot(state), !canRemoveDot(state));
-      more.appendChild(buttons);
     });
     $("more").hidden = !extra.length && !polygon;
   }

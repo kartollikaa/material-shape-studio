@@ -205,9 +205,9 @@ edited shape; Reset lives beside that name.
   reason: Repeats for patterns that repeat, Points and Depth for stars, Sides for n-gons, Proportion
   for rectangles, Squash for circles, Roundness, and Rotate where it shows. Roundness scales every
   corner of Material's recipe together; sharp shapes start at 0%. Then Colour, used in the preview
-  and the exports. **Reset** appears once the shape differs from Material's. **More options**,
-  closed by default, holds Softness, the roundness of the selected dot, and adding or removing a
-  dot. Polygon shapes always expose their dot-specific controls; removal never leaves fewer than
+  and the exports. **Reset** appears once the shape differs from Material's. Polygon shapes show
+  **Add a dot** and **Remove the selected dot** directly below the main sliders. **More options**,
+  closed by default, holds Softness and the roundness of the selected dot. Removal never leaves fewer than
   three corners or changes a one-off shape's repeats.
 - **Take it into your app**: tabs for Compose, SVG, PNG and CSS (§7), each with a one-line description, its
   copy or download buttons, and the code where there is code.
