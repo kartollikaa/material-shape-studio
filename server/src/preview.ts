@@ -1,4 +1,4 @@
-import { svgPath, type ShapePresentation } from "@material-shape-studio/core";
+import { previewFrame, svgPath, type ShapePresentation } from "@material-shape-studio/core";
 import { Resvg } from "@resvg/resvg-js";
 
 export type PreviewItem = { cubics: number[]; bounds: [number, number, number, number]; label: string; presentation: ShapePresentation };
@@ -8,10 +8,7 @@ export function comparisonSvg(items: PreviewItem[]): string {
   const tile = 256;
   const cards = items.map((item, index) => {
     const x = index * tile;
-    const [minX, minY, maxX, maxY] = item.bounds;
-    const size = Math.max(maxX - minX, maxY - minY, 0.1) * 1.15;
-    const left = (minX + maxX - size) / 2;
-    const top = (minY + maxY - size) / 2;
+    const [left, top, size] = previewFrame(item.bounds);
     const at = (u: number, v: number) => `${left + u * size} ${top + v * size}`;
     const dark = item.presentation.theme === "dark";
     const background = dark ? "#222127" : "#f7f5fa";

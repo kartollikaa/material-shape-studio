@@ -55,6 +55,17 @@ describe("imported documents", () => {
     expect(() => builds(state)).not.toThrow();
   });
 
+  it("lets an unrounded imported shape gain roundness without changing its initial geometry", () => {
+    const state = fromDocument({ v: 1, shape: { kind: "ngon", vertices: 7 } });
+    const before = Array.from(buildCubics(JSON.stringify(state.doc)));
+    const control = mainControls(state).find((item) => item.label === "Roundness")!;
+    expect(control.get()).toBe(0);
+    expect(isEdited(state)).toBe(false);
+    control.set(0.5);
+    expect(state.doc.shape).toMatchObject({ rounding: { radius: 0.02 } });
+    expect(Array.from(buildCubics(JSON.stringify(state.doc)))).not.toEqual(before);
+  });
+
   it("retains the imported polygon's editable pattern", () => {
     const state = fromDocument({ v: 1, shape: {
       kind: "polygon", vertices: [[0.2, 0.1], [0.8, 0.1], [0.5, 0.8]],

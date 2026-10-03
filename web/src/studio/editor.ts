@@ -37,8 +37,11 @@ function fromBaseline(source: ShapeDocument, name: string | null): EditorState {
   const doc = structuredClone(source);
   const r = radiiOf(doc.shape);
   const base = structuredClone({ rounding: r.rounding, innerRounding: r.innerRounding, perVertexRounding: r.perVertexRounding });
+  if (!cornersOf(base).length && ["polygon", "ngon", "star", "rectangle"].includes(doc.shape.kind)) {
+    base.rounding = { radius: SHARP_SHAPE_RADIUS };
+  }
   const corners = cornersOf(base);
-  const sharp = corners.length > 0 && corners.every((c) => !c.radius);
+  const sharp = !r.rounding && !r.innerRounding && !r.perVertexRounding || corners.length > 0 && corners.every((c) => !c.radius);
   if (sharp) corners.forEach((c) => { c.radius = SHARP_SHAPE_RADIUS; });
   return { name, doc, initial: structuredClone(source), base, roundness: sharp ? 0 : 1, selected: 0 };
 }
@@ -56,7 +59,7 @@ export function fromDocument(doc: ShapeDocument): EditorState {
 export const isEdited = (s: EditorState) => JSON.stringify(s.doc) !== JSON.stringify(s.initial);
 
 export function applyRoundness(s: EditorState) {
-  const shape = radiiOf(s.doc.shape);
+  const shape = s.doc.shape as Radii;
   for (const key of ["rounding", "innerRounding"] as const) {
     const base = s.base[key];
     if (base) shape[key] = { ...shape[key], radius: round3(base.radius * s.roundness) };

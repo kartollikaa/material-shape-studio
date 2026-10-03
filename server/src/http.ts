@@ -16,13 +16,15 @@ export function createHttpServer(config: ServiceConfig): Server {
     const requestId = randomUUID();
     res.setHeader("x-request-id", requestId);
     res.on("finish", () => console.log(JSON.stringify({ requestId, method: req.method, path: req.path, outcome: res.statusCode })));
-    const address = req.socket.remoteAddress ?? "unknown";
-    const now = Date.now();
-    const usage = requests.get(address);
-    const current = usage && usage.until > now ? usage : { count: 0, until: now + 60_000 };
-    current.count++;
-    requests.set(address, current);
-    if (current.count > 120) { res.status(429).end(); return; }
+    if (req.path !== "/healthz") {
+      const address = req.socket.remoteAddress ?? "unknown";
+      const now = Date.now();
+      const usage = requests.get(address);
+      const current = usage && usage.until > now ? usage : { count: 0, until: now + 60_000 };
+      current.count++;
+      requests.set(address, current);
+      if (current.count > (config.maxRequestsPerMinute ?? 120)) { res.status(429).end(); return; }
+    }
     if (req.path === "/mcp" && Number(req.headers["content-length"] ?? 0) > (config.maxRequestBytes ?? 65_536)) {
       res.status(413).end();
       return;

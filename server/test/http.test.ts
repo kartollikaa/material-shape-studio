@@ -74,9 +74,27 @@ it("rejects forged hosts and browser origins while accepting a native client", a
 });
 
 it("reports health and rejects a body over the configured limit", async () => {
-  const health = await fetch(new URL("/healthz", endpoint));
-  expect(health.status).toBe(200);
-  expect(await health.json()).toEqual({ ok: true });
+  for (let index = 0; index < 125; index++) {
+    const health = await fetch(new URL("/healthz", endpoint));
+    expect(health.status).toBe(200);
+    expect(await health.json()).toEqual({ ok: true });
+  }
   const oversized = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: "x".repeat(70_000) });
   expect(oversized.status).toBe(413);
+});
+
+it("keeps health available when the configured traffic throttle rejects MCP calls", async () => {
+  const limited = createHttpServer({ studioUrl: "https://example.com/studio/", allowedHosts: ["127.0.0.1"], allowedOrigins: [], maxRequestsPerMinute: 2 });
+  await new Promise<void>((resolve) => limited.listen(0, "127.0.0.1", resolve));
+  try {
+    const address = limited.address();
+    if (!address || typeof address === "string") throw new Error("server address missing");
+    const base = `http://127.0.0.1:${address.port}`;
+    expect((await fetch(`${base}/mcp`)).status).toBe(405);
+    expect((await fetch(`${base}/mcp`)).status).toBe(405);
+    expect((await fetch(`${base}/mcp`)).status).toBe(429);
+    expect((await fetch(`${base}/healthz`)).status).toBe(200);
+  } finally {
+    await new Promise<void>((resolve) => limited.close(() => resolve()));
+  }
 });

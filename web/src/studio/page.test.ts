@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { build, buildCubics } from "@material-shape-studio/engine";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
-import { encodeShare } from "@material-shape-studio/core";
+import { encodeShare, previewFrame } from "@material-shape-studio/core";
 import { svgPath } from "../export/svg";
 import { displayName, mountStudio } from "./page";
 
@@ -64,6 +64,8 @@ describe("the studio page", () => {
     dispose = mountStudio(document);
     await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Custom shape"));
     expect(document.querySelectorAll("#preview path")).toHaveLength(1);
+    const bounds = JSON.parse(build(JSON.stringify(doc))).bounds as [number, number, number, number];
+    expect(document.querySelector("#in-use svg")!.getAttribute("viewBox")).toBe(previewFrame(bounds).join(" "));
     slide("Sides", 8);
     expect(byId("shape-status").textContent).toBe("Edited shape");
     const writeText = vi.fn(async (_value: string) => undefined);

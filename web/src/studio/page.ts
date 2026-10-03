@@ -1,4 +1,5 @@
 import { build, buildCubics, version } from "@material-shape-studio/engine";
+import { previewFrame } from "@material-shape-studio/core";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
 import { loadSharedShape } from "./share";
 import type { ShapeDocument, Transform } from "../document";
@@ -232,10 +233,12 @@ export function mountStudio(page: Document) {
     row.replaceChildren();
     if (!cubics) return;
     const d = pathOf(cubics);
+    const [x, y, size] = previewFrame(buildDoc(state.doc).bounds);
+    const artwork = { transform: `translate(${x} ${y}) scale(${size})` };
     row.appendChild(html("span", { className: "label", textContent: "In use:" }));
     const figure = (caption: string, draw: (canvas: Element) => void) => {
       const fig = html("figure");
-      draw(svg("svg", { viewBox: "0 0 1 1", "aria-hidden": "true" }, fig));
+      draw(svg("svg", { viewBox: `${x} ${y} ${size} ${size}`, "aria-hidden": "true" }, fig));
       fig.appendChild(html("figcaption", { textContent: caption }));
       row.appendChild(fig);
     };
@@ -246,20 +249,21 @@ export function mountStudio(page: Document) {
       svg("stop", { offset: 0, "stop-color": "#8ec5ff" }, sky);
       svg("stop", { offset: 1, "stop-color": "#fbd3e9" }, sky);
       const g = svg("g", { "clip-path": "url(#clip-photo)" }, canvas);
-      svg("rect", { x: 0, y: 0, width: 1, height: 1, fill: "url(#sky)" }, g);
-      svg("circle", { cx: 0.7, cy: 0.32, r: 0.12, fill: "#fff3b0" }, g);
-      svg("path", { d: "M0 0.8 L0.3 0.45 L0.52 0.68 L0.7 0.5 L1 0.82 L1 1 L0 1Z", fill: "#3f6e5a" }, g);
+      const scene = svg("g", artwork, g);
+      svg("rect", { x: 0, y: 0, width: 1, height: 1, fill: "url(#sky)" }, scene);
+      svg("circle", { cx: 0.7, cy: 0.32, r: 0.12, fill: "#fff3b0" }, scene);
+      svg("path", { d: "M0 0.8 L0.3 0.45 L0.52 0.68 L0.7 0.5 L1 0.82 L1 1 L0 1Z", fill: "#3f6e5a" }, scene);
     });
     figure("Icon button", (canvas) => {
       svg("path", { d, fill: colour }, canvas);
-      svg("path", { d: "M0.5 0.34 V0.66 M0.34 0.5 H0.66", stroke: "#ffffff", "stroke-width": 0.07, "stroke-linecap": "round" }, canvas);
+      svg("path", { d: "M0.5 0.34 V0.66 M0.34 0.5 H0.66", stroke: "#ffffff", "stroke-width": 0.07, "stroke-linecap": "round" }, svg("g", artwork, canvas));
     });
     figure("Avatar", (canvas) => {
       svg("path", { d, style: "fill: var(--soft)" }, canvas);
       const text = svg("text", {
         x: 0.5, y: 0.5, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 0.32, "font-weight": 600,
         style: "fill: var(--text)", "font-family": "system-ui, sans-serif",
-      }, canvas);
+      }, svg("g", artwork, canvas));
       text.textContent = "AB";
     });
   }
