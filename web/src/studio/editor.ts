@@ -17,6 +17,8 @@ export type Control = {
   min: number;
   max: number;
   step: number;
+  scale?: number;
+  unit?: string;
   get: () => number;
   set: (value: number) => void;
   show: (value: number) => string;
@@ -93,7 +95,7 @@ export function mainControls(s: EditorState): Control[] {
   const shape = s.doc.shape;
   const list: Control[] = [];
   const roundness: Control = {
-    label: "Roundness", why: "How rounded the corners are.", min: 0, max: 2.5, step: 0.01, show: percent,
+    label: "Roundness", why: "100% keeps Material’s original corner recipe. Originally sharp shapes start at 0%.", min: 0, max: 2.5, step: 0.01, scale: 100, unit: "%", show: percent,
     get: () => s.roundness,
     set: (v) => { s.roundness = v; applyRoundness(s); },
   };
@@ -117,7 +119,7 @@ export function mainControls(s: EditorState): Control[] {
         set: (v) => { shape.verticesPerRadius = v; },
       },
       {
-        label: "Depth", why: "How deep the dips between the points go.", min: 0.05, max: 0.9, step: 0.01, show: percent,
+        label: "Depth", why: "How deep the dips between the points go.", min: 0.05, max: 0.9, step: 0.01, scale: 100, unit: "%", show: percent,
         get: () => 1 - (shape.innerRadius ?? 0.5),
         set: (v) => { shape.innerRadius = round3(1 - v); },
       },
@@ -133,7 +135,7 @@ export function mainControls(s: EditorState): Control[] {
   if (shape.kind === "rectangle") {
     list.push(
       {
-        label: "Proportion", why: "Width compared to height.", min: 0.5, max: 3, step: 0.01, show: (v) => `${v.toFixed(2)} : 1`,
+        label: "Proportion", why: "Width compared to height.", min: 0.5, max: 3, step: 0.01, unit: ": 1", show: (v) => `${v.toFixed(2)} : 1`,
         get: () => (shape.width ?? 2) / (shape.height ?? 2),
         set: (v) => { shape.width = round3(v); shape.height = 1; },
       },
@@ -143,14 +145,14 @@ export function mainControls(s: EditorState): Control[] {
   const squash = findTransform(s.doc, "scale")?.y ?? 1;
   if (shape.kind === "circle") {
     list.push({
-      label: "Squash", why: "Flattens the circle into an oval.", min: 0.3, max: 1, step: 0.01, show: percent,
+      label: "Squash", why: "Flattens the circle into an oval.", min: 0.3, max: 1, step: 0.01, scale: 100, unit: "%", show: percent,
       get: () => findTransform(s.doc, "scale")?.y ?? 1,
       set: (v) => { ensureTransform(s.doc, "scale", () => ({ type: "scale", x: 1, y: 1 })).y = v; },
     });
   }
   if (shape.kind !== "circle" || squash < 1) {
     list.push({
-      label: "Rotate", why: "", min: -180, max: 180, step: 1, show: (v) => `${v}°`,
+      label: "Rotate", why: "", min: -180, max: 180, step: 1, unit: "°", show: (v) => `${v}°`,
       get: () => findTransform(s.doc, "rotate")?.degrees ?? 0,
       set: (v) => { ensureTransform(s.doc, "rotate", () => ({ type: "rotate", degrees: 0 })).degrees = v; },
     });
@@ -162,7 +164,7 @@ export function moreControls(s: EditorState): Control[] {
   const list: Control[] = [];
   if (cornersOf(radiiOf(s.doc.shape)).length) {
     list.push({
-      label: "Softness", why: "Blends each corner smoothly into its sides.", min: 0, max: 1, step: 0.01, show: percent,
+      label: "Softness", why: "Blends each corner smoothly into its sides.", min: 0, max: 1, step: 0.01, scale: 100, unit: "%", show: percent,
       get: () => cornersOf(radiiOf(s.doc.shape))[0]?.smoothing ?? 0,
       set: (v) => { for (const c of cornersOf(radiiOf(s.doc.shape))) c.smoothing = v; },
     });
