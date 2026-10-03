@@ -42,7 +42,6 @@ let dispose: () => void;
 beforeEach(() => {
   document.body.innerHTML = body;
   dispose = mountStudio(document);
-  click(byId("edit-points"));
 });
 afterEach(() => {
   dispose();
@@ -52,14 +51,11 @@ afterEach(() => {
 });
 
 describe("the studio page", () => {
-  it("starts with a clean canvas and no point-specific controls", () => {
-    dispose();
-    document.body.innerHTML = body;
-    dispose = mountStudio(document);
-    expect(byId("edit-points").getAttribute("aria-pressed")).toBe("false");
-    expect(dots()).toHaveLength(0);
-    expect(labels("#more-controls label")).toEqual(["Softness"]);
-    expect(labels("#more-controls button")).toEqual([]);
+  it("starts with editable dots and point-specific controls without a mode toggle", () => {
+    expect(byId("edit-points")).toBeNull();
+    expect(dots()).toHaveLength(2);
+    expect(labels("#more-controls label")).toEqual(["Softness", "Roundness of the selected dot"]);
+    expect(labels("#more-controls button")).toEqual(["Add a dot", "Remove the selected dot"]);
   });
 
   it("closes the compact picker and returns focus after selecting a shape", () => {
@@ -69,17 +65,6 @@ describe("the studio page", () => {
     expect(byId("change-shape").getAttribute("aria-expanded")).toBe("false");
     expect(document.activeElement).toBe(byId("change-shape"));
     expect(byId("shape-name").textContent).toBe("Heart");
-  });
-
-  it("makes point editing optional without changing the shape", () => {
-    const before = exportCode();
-    click(byId("edit-points"));
-    expect(dots()).toHaveLength(0);
-    press("ArrowRight");
-    expect(exportCode()).toBe(before);
-    click(byId("edit-points"));
-    expect(dots()).toHaveLength(2);
-    expect(document.querySelector(".construction")).not.toBeNull();
   });
 
   it("accepts displayed numeric units, clamps values, and restores numeric focus", () => {

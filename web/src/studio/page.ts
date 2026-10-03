@@ -34,7 +34,6 @@ export function mountStudio(page: Document) {
   let colour = "#6750a4";
   let tab: Tab = "compose";
   let dragging = false;
-  let editingPoints = false;
   let frozenBox: Box | null = null;
   let lastGood: Built | null = null;
   let controlTimer: ReturnType<typeof setTimeout> | undefined;
@@ -166,11 +165,11 @@ export function mountStudio(page: Document) {
       }
     });
     const more = $("more-controls");
-    const extra = moreControls(state).filter((c) => editingPoints || c.label !== "Roundness of the selected dot");
+    const extra = moreControls(state);
     const polygon = state.doc.shape.kind === "polygon";
     refill(more, () => {
       extra.forEach((c) => controlRow(more, c));
-      if (!polygon || !editingPoints) return;
+      if (!polygon) return;
       const buttons = html("div", { className: "buttons" });
       actionButton(buttons, "Add a dot", () => addDot(state));
       actionButton(buttons, "Remove the selected dot", () => removeDot(state), !canRemoveDot(state));
@@ -201,9 +200,7 @@ export function mountStudio(page: Document) {
     const transforms = viewTransforms(state.doc);
     const built = buildPreview(transforms);
     const shape = state.doc.shape;
-    const dots = built && editingPoints && shape.kind === "polygon" ? shape.vertices.map((p) => forward(p, transforms)) : [];
-    $("edit-points").hidden = shape.kind !== "polygon";
-    $("edit-points").setAttribute("aria-pressed", String(editingPoints));
+    const dots = built && shape.kind === "polygon" ? shape.vertices.map((p) => forward(p, transforms)) : [];
     refill(preview, () => {
       if (!built) return;
       const box = dragging && frozenBox ? frozenBox : squareAround(built.bounds, dots);
@@ -405,7 +402,6 @@ export function mountStudio(page: Document) {
     const button = $("change-shape");
     button.setAttribute("aria-expanded", String(button.getAttribute("aria-expanded") !== "true"));
   });
-  $("edit-points").addEventListener("click", () => { editingPoints = !editingPoints; render(); });
   $("redo").addEventListener("click", redo);
   $("reset").addEventListener("click", () => { remember(); state = pick(state.name); lastGood = null; render(); });
   $("colour").addEventListener("input", (e) => { colour = (e.target as HTMLInputElement).value; renderLive(); });
@@ -432,7 +428,7 @@ export function mountStudio(page: Document) {
       return;
     }
     const shape = state.doc.shape;
-    if (!editingPoints || shape.kind !== "polygon" || (e.target as HTMLElement).closest?.("input, textarea, select, pre, [role=tab]")) return;
+    if (shape.kind !== "polygon" || (e.target as HTMLElement).closest?.("input, textarea, select, pre, [role=tab]")) return;
     const step = e.shiftKey ? 0.05 : 0.005;
     const delta = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] } as Record<string, [number, number]>)[e.key];
     if (!delta) return;
