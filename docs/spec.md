@@ -213,8 +213,9 @@ the arrow keys move between export tabs. Dragging dots is a second way in.
 
 Restoring focus after an edit never scrolls the page. The canvas reserves space for Reset and the
 dot hint, and the code preview keeps a stable height as a slider updates the export, so edits near
-the bottom do not jump the page upward. Slider commits also preserve the viewport when their edit
-adds or removes a control, such as Rotate appearing after a circle is squashed.
+the bottom do not jump the page upward. Circle adjustments reserve space for Rotate while it is
+unavailable, so introducing or removing it does not change the page height. Slider commits also
+preserve the viewport when their edit changes the controls.
 
 ## 7. Exporters
 

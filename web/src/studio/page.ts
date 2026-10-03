@@ -129,7 +129,18 @@ export function mountStudio(page: Document) {
     $("shape-status").textContent = isEdited(state) ? "Edited shape" : "Material original";
     $("reset").hidden = !isEdited(state);
     const main = $("controls");
-    refill(main, () => mainControls(state).forEach((c) => controlRow(main, c)));
+    const controls = mainControls(state);
+    refill(main, () => {
+      controls.forEach((c) => controlRow(main, c));
+      if (state.doc.shape.kind === "circle" && controls.length === 1) {
+        const space = html("div", { className: "control control-space" });
+        space.setAttribute("aria-hidden", "true");
+        const top = html("div", { className: "top" });
+        top.appendChild(html("span", { textContent: "Rotate" }));
+        space.append(top, html("input", { type: "range", disabled: true }));
+        main.appendChild(space);
+      }
+    });
     const more = $("more-controls");
     const extra = moreControls(state);
     const polygon = state.doc.shape.kind === "polygon";

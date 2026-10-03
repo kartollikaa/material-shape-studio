@@ -256,6 +256,9 @@ describe("the keyboard", () => {
     expect(document.activeElement).toBe(slider("Squash"));
     slide("Squash", 0.98);
     expect(slider("Squash").value).toBe("0.98");
+    slide("Squash", 1);
+    expect(labels("#controls label")).toEqual(["Squash"]);
+    expect(document.activeElement).toBe(slider("Squash"));
   });
 
   it("moves focus to the next usable button when the pressed one turns itself off", () => {

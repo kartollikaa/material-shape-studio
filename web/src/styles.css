@@ -61,6 +61,7 @@ svg.preview { display: block; width: 100%; height: 340px; margin: 12px auto; tou
 .col-adjust { padding: 4px 0; }
 .control { margin: 20px 0 0; }
 .control:first-child { margin-top: 0; }
+.control-space { visibility: hidden; }
 .control .top { display: flex; justify-content: space-between; gap: 8px; }
 .control .top label { font-weight: 500; }
 .control .top output { color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
