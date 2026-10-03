@@ -152,7 +152,7 @@ export function mountStudio(page: Document) {
     $("shape-status").textContent = isEdited(state) ? "Edited shape" : "Material original";
     $("reset").hidden = !isEdited(state);
     const main = $("controls");
-    const controls = mainControls(state);
+    const controls = [...mainControls(state), ...moreControls(state)];
     refill(main, () => {
       controls.forEach((c) => controlRow(main, c));
       if (state.doc.shape.kind === "circle" && controls.length === 1) {
@@ -164,12 +164,7 @@ export function mountStudio(page: Document) {
         main.appendChild(space);
       }
     });
-    const more = $("more-controls");
-    const extra = moreControls(state);
     const polygon = state.doc.shape.kind === "polygon";
-    refill(more, () => {
-      extra.forEach((c) => controlRow(more, c));
-    });
     const buttons = $("dot-actions");
     buttons.hidden = !polygon;
     refill(buttons, () => {
@@ -177,7 +172,6 @@ export function mountStudio(page: Document) {
       actionButton(buttons, "Add a dot", () => addDot(state));
       actionButton(buttons, "Remove the selected dot", () => removeDot(state), !canRemoveDot(state));
     });
-    $("more").hidden = !extra.length && !polygon;
   }
 
   function buildPreview(transforms: Transform[]): Built | null {

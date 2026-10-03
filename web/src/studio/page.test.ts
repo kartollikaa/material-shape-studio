@@ -54,7 +54,7 @@ describe("the studio page", () => {
   it("starts with editable dots and point-specific controls without a mode toggle", () => {
     expect(byId("edit-points")).toBeNull();
     expect(dots()).toHaveLength(2);
-    expect(labels("#more-controls label")).toEqual(["Softness", "Roundness of the selected dot"]);
+    expect(labels("#controls label")).toContain("Roundness of the selected dot");
     expect(labels("#dot-actions button")).toEqual(["Add a dot", "Remove the selected dot"]);
   });
 
@@ -121,7 +121,7 @@ describe("the studio page", () => {
       expect(byId("shape-name").textContent).toBe(displayName(name));
     }
     click(document.querySelector('[data-name="Heart"]')!);
-    expect(labels("#controls label")).toEqual(["Roundness", "Rotate"]);
+    expect(labels("#controls label")).toEqual(["Roundness", "Rotate", "Softness", "Roundness of the selected dot"]);
   });
 
   it("names a tab icon that the site ships", () => {
@@ -210,12 +210,12 @@ describe("the studio page", () => {
     expect(inUse()).not.toBe(pathOf("Heart"));
   });
 
-  it("keeps More options for shapes that have them", () => {
-    expect(byId("more").hidden).toBe(false);
-    expect(labels("#more-controls label")).toEqual(["Softness", "Roundness of the selected dot"]);
+  it("shows all relevant properties together without More options", () => {
+    expect(byId("more")).toBeNull();
+    expect(labels("#controls label")).toEqual(["Repeats", "Roundness", "Rotate", "Softness", "Roundness of the selected dot"]);
     expect(labels("#dot-actions button")).toEqual(["Add a dot", "Remove the selected dot"]);
     click(document.querySelector('[data-name="Circle"]')!);
-    expect(byId("more").hidden).toBe(true);
+    expect(labels("#controls label")).toEqual(["Squash"]);
   });
 });
 
