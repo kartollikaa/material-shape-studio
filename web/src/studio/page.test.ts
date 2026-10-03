@@ -161,6 +161,28 @@ describe("the browser address", () => {
     value.dispatchEvent(new Event("change"));
     expect(window.location.hash).toContain("rotate=45");
   });
+
+  it("restores the default editor when all URL parameters are removed", () => {
+    click(document.querySelector('[data-name="Heart"]')!);
+    slide("Rotate", 45);
+    openTab("svg");
+    window.history.replaceState(null, "", "/");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(byId("shape-name").textContent).toBe("Cookie 4 Sided");
+    expect(slider("Rotate").value).toBe("0");
+    expect(document.querySelector('[data-tab="compose"]')!.getAttribute("aria-selected")).toBe("true");
+    expect(window.location.hash).toBe("");
+  });
+
+  it("clears a bad-link notice when all URL parameters are removed", () => {
+    window.history.replaceState(null, "", "#broken");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(document.querySelector("[data-url-notice]")).not.toBeNull();
+    window.history.replaceState(null, "", "/");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(document.querySelector("[data-url-notice]")).toBeNull();
+    expect(window.location.hash).toBe("");
+  });
 });
 afterEach(() => {
   dispose();

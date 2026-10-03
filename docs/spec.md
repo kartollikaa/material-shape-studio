@@ -142,7 +142,8 @@ Named control values apply after that geometry, so editing a value in the addres
 
 The address updates synchronously during edits, including undo, redo and reset, using
 `history.replaceState` to preserve browser history. Copying the browser address shares the current
-state; no share button is needed. Opening or editing the hash restores the editor. The parameters
+state; no share button is needed. Opening or editing the hash restores the editor. Removing the
+hash restores the default shape, colour and export tab, and clears any link notice. The parameters
 can optionally declare `v=1`; other versions are rejected.
 
 A hash the codec cannot decode opens the default shape with a dismissible notice, never a blank

@@ -111,7 +111,12 @@ export function syncAddress(view: Window, initial: SharedState, apply: (state: S
   const defaults = JSON.stringify(initial);
   let previous = defaults;
   const load = () => {
-    if (disposed || !view.location.hash) return;
+    if (disposed) return;
+    if (!view.location.hash) {
+      previous = defaults;
+      apply(JSON.parse(defaults));
+      return;
+    }
     try {
       const state = decodeState(view.location.hash.slice(1));
       previous = JSON.stringify(state);
