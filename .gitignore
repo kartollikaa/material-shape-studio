@@ -4,6 +4,9 @@
 .kotlin/
 node_modules/
 web/dist/
+server/dist/
+web/playwright-report/
+web/test-results/
 packages/engine/dist/
 .idea/
 *.iml

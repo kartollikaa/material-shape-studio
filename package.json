@@ -4,13 +4,14 @@
   "workspaces": [
     "packages/engine",
     "packages/core",
-    "web"
+    "web",
+    "server"
   ],
   "engines": {
     "node": ">=24"
   },
   "scripts": {
-    "test": "npm run test -w packages/engine -w packages/core -w web",
-    "build": "npm run build -w web"
+    "test": "npm run test -w packages/engine -w packages/core -w web -w server",
+    "build": "npm run build -w web && npm run build -w server"
   }
 }

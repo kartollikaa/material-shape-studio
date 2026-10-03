@@ -3,6 +3,8 @@
 What the app does and how its parts fit. The reasoning behind the architecture is in
 [research/feasibility.md](./research/feasibility.md); the delivery order is in
 [decomposition.md](./decomposition.md). Everything here is for v1 unless marked later.
+The remote agent extension is specified separately in [mcp-spec.md](./mcp-spec.md) and implemented
+as the service described in [mcp.md](./mcp.md).
 
 ## 1. Purpose and scope
 

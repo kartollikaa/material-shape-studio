@@ -1,0 +1,30 @@
+{
+  "name": "@material-shape-studio/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "pretest": "node scripts/build.mjs",
+    "test": "vitest run",
+    "build": "tsc --noEmit && node scripts/build.mjs",
+    "start": "node dist/index.mjs"
+  },
+  "dependencies": {
+    "@material-shape-studio/core": "^0.1.0",
+    "@material-shape-studio/engine": "^0.1.0",
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/express": "^2.0.0",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "express": "^5.1.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^26.6.3",
+    "esbuild": "^0.25.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}

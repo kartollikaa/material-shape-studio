@@ -1,0 +1,9 @@
+.git
+.gradle
+.kotlin
+node_modules
+web/dist
+server/dist
+packages/engine/dist
+**/build
+docs

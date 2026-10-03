@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Connect an agent · Material Shape Studio</title>
+    <meta name="description" content="Connect your coding agent to Material Shape Studio's remote shape tools." />
+    <link rel="stylesheet" href="../src/styles.css" />
+  </head>
+  <body>
+    <header><div class="brand"><h1>Connect an agent</h1><p>Shape tools for coding agents</p></div><span class="spacer"></span><a href="../">Back to Studio</a></header>
+    <main class="connect-main">
+      <section class="connect-card">
+        <h2>Connect Material Shape Studio</h2>
+        <p id="connection-state">Checking connection availability…</p>
+        <div id="connection-details" hidden>
+          <p>Give your agent this page, or copy the prompt below. Your agent host may ask you to approve the connection.</p>
+          <p><strong>Remote MCP endpoint</strong> <code id="endpoint"></code> <button id="copy-endpoint">Copy URL</button></p>
+          <p><strong>Agent prompt</strong></p><pre id="prompt"></pre><button id="copy-prompt">Copy prompt</button>
+          <h3>Claude Code</h3><pre id="claude-command"></pre>
+          <h3>Cursor</h3><p>Add a remote MCP server named <code>material-shape-studio</code> with the URL above in your MCP settings. Keep your existing servers.</p>
+        </div>
+        <p><a href="./agent.txt">Plain-text instructions for agents</a></p>
+        <p id="copy-status" role="status"></p>
+      </section>
+    </main>
+    <script type="module" src="../src/connect.ts"></script>
+  </body>
+</html>

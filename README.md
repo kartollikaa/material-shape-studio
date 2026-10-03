@@ -20,6 +20,12 @@ Shared `#doc=` links reopen the complete shape document in the editor, including
 catalogue. An imported shape can be adjusted and reset to its imported version. **Copy shape document**
 copies the current JSON for another agent or developer; malformed links leave the regular editor usable.
 
+The [Connect an agent](https://kartollikaa.github.io/material-shape-studio/connect/) page explains the
+remote MCP integration. It shows an unavailable state until a verified public endpoint is configured.
+The MCP service exposes listing, creation, PNG comparison previews, and Compose/SVG/CSS export; see
+[docs/mcp.md](docs/mcp.md) for the local service and [docs/mcp-deployment.md](docs/mcp-deployment.md)
+for its release requirements.
+
 Under it, the engine runs Google's `graphics-shapes` in the browser, so what you see is what
 Compose draws. Read in this order:
 
@@ -59,8 +65,10 @@ run until `./gradlew build` has packaged the engine.
 npm run build
 ```
 
-Builds the static site into `web/dist`. The web workspace depends on the engine package, so this also
-needs `./gradlew build` first. Asset URLs are relative, so the site can be served from any path.
+Builds the static site into `web/dist` and the MCP service into `server/dist`. Both depend on the
+engine package, so this also needs `./gradlew build` first. Site asset URLs are relative, so it can
+be served from any path. `npm run test:e2e -w web` checks the built site in Chrome at root and
+repository subpaths.
 
 ```bash
 npm run dev -w web
