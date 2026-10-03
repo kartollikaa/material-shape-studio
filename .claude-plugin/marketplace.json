@@ -1,0 +1,11 @@
+{
+  "name": "material-shape-studio",
+  "owner": { "name": "Material Shape Studio" },
+  "plugins": [
+    {
+      "name": "material-shape-studio",
+      "source": "./",
+      "description": "Create and preview Material shapes with a local CLI"
+    }
+  ]
+}

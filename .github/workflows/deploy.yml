@@ -30,7 +30,7 @@ jobs:
       - run: ./gradlew :engine:jsPackage
       - run: npm run build -w web
         env:
-          VITE_MCP_ENDPOINT: ${{ vars.MCP_ENDPOINT }}
+          VITE_MCP_PACKAGE_VERSION: ${{ vars.MCP_PACKAGE_VERSION }}
       - uses: actions/upload-pages-artifact@v5
         with:
           path: web/dist

@@ -21,7 +21,7 @@ A static web app for designers and developers working with Material 3 Expressive
 5. **Export** the shape as code for platforms with a port of `androidx.graphics.shapes`, and as SVG,
    PNG and CSS for those without; share it as a URL that carries the whole document.
 
-Out of scope: raster tracing, component or theme building, accounts, telemetry, any server.
+Out of scope: raster tracing, component or theme building, accounts, telemetry, and hosted services. The optional local agent CLI and stdio MCP are specified in [the agent integration spec](mcp-spec.md).
 The studio shows the shape in use on a photo, an icon button and an avatar. Recorded as a later
 idea, not v1: a FAB and a loading indicator that morphs to a circle.
 The project is independent of Google; "Material Design" is Google's trademark and the site says so.

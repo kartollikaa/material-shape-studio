@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Connect an agent · Material Shape Studio</title>
-    <meta name="description" content="Connect your coding agent to Material Shape Studio's remote shape tools." />
+    <meta name="description" content="Install Material Shape Studio's free agent plugin and local shape tools." />
     <link rel="stylesheet" href="../src/styles.css" />
   </head>
   <body>
@@ -14,11 +14,13 @@
         <h2>Connect Material Shape Studio</h2>
         <p id="connection-state">Checking connection availability…</p>
         <div id="connection-details" hidden>
-          <p>Give your agent this page, or copy the prompt below. Your agent host may ask you to approve the connection.</p>
-          <p><strong>Remote MCP endpoint</strong> <code id="endpoint"></code> <button id="copy-endpoint">Copy URL</button></p>
+          <p>Give your agent this page, or copy the prompt below. The plugin teaches agents to use the CLI; local MCP is optional. Node.js 24 or newer runs the shape tools on your machine. Your agent host may ask you to approve installation.</p>
+          <p><strong>Plugin source</strong> <a href="https://github.com/kartollikaa/material-shape-studio">GitHub repository</a></p>
+          <p><strong>Package</strong> <code id="package-spec"></code> <button id="copy-package">Copy package</button></p>
           <p><strong>Agent prompt</strong></p><pre id="prompt"></pre><button id="copy-prompt">Copy prompt</button>
-          <h3>Claude Code</h3><pre id="claude-command"></pre>
-          <h3>Cursor</h3><p>Add a remote MCP server named <code>material-shape-studio</code> with the URL above in your MCP settings. Keep your existing servers.</p>
+          <h3>CLI</h3><pre id="cli-command"></pre>
+          <h3>Optional MCP for Claude Code</h3><pre id="claude-command"></pre>
+          <h3>Optional MCP for Cursor</h3><p>Add a local stdio MCP server named <code>material-shape-studio</code> with command <code>npx</code> and arguments <code>--yes</code> and the package shown above. Keep your existing servers.</p>
         </div>
         <p><a href="./agent.txt">Plain-text instructions for agents</a></p>
         <p id="copy-status" role="status"></p>

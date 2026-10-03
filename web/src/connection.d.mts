@@ -1,1 +1,1 @@
-export function connectionInstructions(raw: string | undefined): { available: boolean; endpoint: string; prompt: string; text: string };
+export function connectionInstructions(version: string | undefined): { available: boolean; packageSpec: string; prompt: string; text: string };

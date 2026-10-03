@@ -34,6 +34,8 @@ jobs:
         run: npm test
       - name: Build site
         run: npm run build
+      - name: Install and probe packaged local agent tools
+        run: node server/test/package-smoke.mjs
       - name: Install browser for site checks
         run: npx playwright install --with-deps chrome
       - name: Built site checks

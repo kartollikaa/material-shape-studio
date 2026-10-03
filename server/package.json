@@ -1,29 +1,31 @@
 {
-  "name": "@material-shape-studio/server",
+  "name": "material-shape-studio-mcp",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
+  "bin": { "material-shape-studio-mcp": "dist/stdio.mjs", "shape-studio": "dist/cli.mjs" },
+  "files": ["dist/stdio.mjs", "dist/cli.mjs", "dist/worker.mjs", "README.md"],
+  "engines": { "node": ">=24" },
   "scripts": {
     "pretest": "node scripts/build.mjs",
     "test": "vitest run",
     "build": "tsc --noEmit && node scripts/build.mjs",
-    "start": "node dist/index.mjs"
+    "start": "node dist/stdio.mjs",
+    "start:http": "node dist/index.mjs",
+    "prepack": "npm run build"
   },
   "dependencies": {
-    "@material-shape-studio/core": "^0.1.0",
-    "@material-shape-studio/engine": "^0.1.0",
-    "@modelcontextprotocol/client": "^2.0.0",
-    "@modelcontextprotocol/express": "^2.0.0",
-    "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "@resvg/resvg-js": "^2.6.2",
-    "express": "^5.1.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/express": "^2.0.0",
+    "@modelcontextprotocol/node": "^2.0.0",
     "@types/express": "^5.0.0",
     "@types/node": "^26.6.3",
     "esbuild": "^0.25.0",
+    "express": "^5.1.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.2"
   }

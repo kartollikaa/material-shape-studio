@@ -1,4 +1,16 @@
-# Public MCP integration
+# Local agent integration
+
+## Current decision
+
+The owner chose a zero-cost release: a local CLI distributed as a public npm package, a portable agent plugin that teaches agents to use it, and an optional local stdio MCP adapter using the same geometry implementation. The Studio website remains on GitHub Pages. No paid compute host, public MCP endpoint, account, token, or model subscription is required. This decision supersedes the remote-hosting proposal retained below as design history.
+
+A developer can give a coding agent the Studio's Connect page. Where the agent can install a plugin or execute shell commands, it may install the public package and run `shape-studio` to list, create, preview, and export shapes. Where local MCP is supported, it may register `material-shape-studio-mcp` over stdio. The host may still require approval or manual configuration. Node.js 24 or newer runs on the user's machine; no Kotlin toolchain is needed after publication. A remote-only agent without local execution cannot use this release's CLI or MCP.
+
+The CLI consumes complete, validated `ShapeDocument` values and invokes the compiled Kotlin/JS geometry engine. It returns JSON to stdout and errors to stderr. `create` returns the exact document and an editable Studio link; `preview` writes a bounded comparison PNG only to an explicit new path and returns editable links; `export` returns Compose, SVG, or CSS for the exact supplied document. The plugin skill uses this create–preview–review–export sequence and tells the agent how to recover a document after the developer edits in the browser. The four existing MCP tools remain an optional adapter over the same engine and bounded worker jobs.
+
+The website must not advertise an unpublished package. One validated build setting identifies a verified package version in the visible Connect page and its plain-text agent instructions. Release requires a clean installation of the npm tarball outside the repository, a CLI workflow, an SDK stdio-client workflow, and a browser check at root and repository subpath. Publishing the npm package and enabling the website instructions are separate owner-controlled steps; until they happen, the page states that installation is unavailable.
+
+## Superseded remote-hosting proposal
 
 Approved extension to [the product specification](spec.md). It supersedes the local-first recommendation in [the research](research/mcp-demand.md) for this feature only. Implementation and public deployment are separate milestones.
 

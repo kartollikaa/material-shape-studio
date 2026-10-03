@@ -1,0 +1,12 @@
+{
+  "name": "material-shape-studio",
+  "interface": { "displayName": "Material Shape Studio" },
+  "plugins": [
+    {
+      "name": "material-shape-studio",
+      "source": { "source": "local", "path": "./" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,4 +1,19 @@
-# Public MCP implementation plan
+# Agent integration plan
+
+## Current zero-cost slice
+
+The owner replaced the remote-first release with a local CLI, plugin skill, and optional stdio MCP. The remote plan below records completed design work and is no longer the release checklist. No hosted service or public endpoint will be configured for this slice.
+
+- [x] Reuse the shared document, catalogue, exporters, browser codec, preview renderer, and worker limits from the locally completed remote prototype.
+- [x] Add stdio MCP with an SDK-client check of the four shape tools.
+- [x] Add `shape-studio` CLI for list, create, preview, and export with CLI workflow tests.
+- [x] Package a public npm tarball with only runtime files; install it outside the monorepo and verify CLI and MCP without workspace dependencies.
+- [x] Add a portable plugin manifest and skill teaching the CLI workflow; validate the Claude-compatible manifest and examples.
+- [x] Update the Connect page and machine-readable instructions for a pinned published package; verify unavailable and configured builds at root and subpath.
+- [ ] Update README, product spec, and MCP documentation. Run full tests, build, browser checks, package smoke, and independent review. The independent review remains pending.
+- [ ] Publish package and plugin only with an owner-approved publishing identity. Set the website version only after external install succeeds. Report publication and actual client checks separately from local readiness.
+
+## Superseded remote-hosting plan
 
 > **For agentic workers:** Use `superpowers:executing-plans` to implement this plan task by task. Implementation is native in the current chat. An independent review is required at each completed slice; reviewer availability must be established before implementation rather than replaced with self-grading.
 

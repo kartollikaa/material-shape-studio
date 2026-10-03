@@ -1,4 +1,12 @@
-# Material Shape Studio MCP
+# Material Shape Studio agent tools
+
+The zero-cost integration is a local `shape-studio` CLI with an agent plugin skill. A local stdio MCP adapter exposes the same four shape tools to compatible clients. Both run the compiled Kotlin/JS engine on the user's machine and return editable Studio links. Node.js 24 or newer is required; users do not need a JDK, account, API key, or hosted service. The [Connect page](https://kartollikaa.github.io/material-shape-studio/connect/) advertises a pinned package only after it has been published and independently installed.
+
+The CLI accepts a catalogue name or versioned shape document JSON, writes JSON results to stdout, and writes a comparison PNG only to a new path supplied by `--output`. `shape-studio list`, `create`, `preview`, and `export` cover the review loop; see [the package README](../server/README.md) for commands. The optional MCP uses `material-shape-studio-mcp` as a stdio executable and retains `list_shapes`, `create_shape`, `preview_shapes`, and `export_shape`. Browser edits are returned by copying the full shape document; a link alone does not expose those edits to the agent.
+
+The remote HTTP implementation described below remains an unpublished prototype. It is not the selected release path and no public endpoint is advertised.
+
+## Unpublished HTTP prototype
 
 The remote MCP service lets compatible coding agents list Material shapes, create a shape from a catalogue name or complete `ShapeDocument`, compare shapes as a PNG, and export the same document as Compose, SVG, or CSS. The website remains static; the service is a separate Node process at `/mcp`.
 
@@ -10,4 +18,4 @@ The PNG and Studio's in-use previews share an automatic frame around the supplie
 
 For local development, build the engine, run `npm ci`, and run `npm run build -w server`. Set `STUDIO_URL` to the HTTPS website base, `ALLOWED_HOSTS` to comma-separated hostnames, and `ALLOWED_ORIGINS` to allowed browser origin hostnames. `MAX_REQUESTS_PER_MINUTE` sets the per-instance socket-address throttle; choose it for the actual proxy topology and use ingress rate limiting for shared public enforcement. Run `npm start -w server`; the default port is 3000. `/healthz` reports readiness. Test the endpoint with `node server/scripts/probe.mjs http://127.0.0.1:3000/mcp`.
 
-The website's Connect page is unavailable until `VITE_MCP_ENDPOINT` is set to a verified public HTTPS `/mcp` URL at build time. Visiting the page does not install software or alter a user's agent configuration. Claude Code accepts a remote HTTP server through `claude mcp add --transport http`; Cursor accepts a named remote URL in MCP settings. Host approval and tool display vary by client.
+The earlier remote design would need a host, public rate limiting, and separate deployment checks before it could be offered. The current website uses `VITE_MCP_PACKAGE_VERSION` to enable local package instructions only after publication. Visiting the page does not install software or alter agent configuration.

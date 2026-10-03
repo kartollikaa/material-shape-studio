@@ -10,7 +10,7 @@ const textResult = (value: Record<string, unknown>): ToolResult => ({ content: [
 const toolError = (error: unknown): ToolResult => ({ content: [{ type: "text", text: (error as Error).message }], isError: true });
 const presentation = (colour: string): SharedShape["presentation"] => ({ colour, theme: "light", context: "button" });
 
-export function registerShapeTools(server: McpServer, jobs: ShapeJobs, config: ServiceConfig) {
+export function registerShapeTools(server: McpServer, jobs: ShapeJobs, config: Pick<ServiceConfig, "studioUrl">) {
   const studioUrl = (fragment: string) => `${config.studioUrl.replace(/#.*$/, "")}${fragment}`;
 
   server.registerTool("list_shapes", {
