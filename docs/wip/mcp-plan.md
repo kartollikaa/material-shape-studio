@@ -10,7 +10,8 @@ The owner replaced the remote-first release with a local CLI, plugin skill, and 
 - [x] Package a public npm tarball with only runtime files; install it outside the monorepo and verify CLI and MCP without workspace dependencies.
 - [x] Add a portable plugin manifest and skill teaching the CLI workflow; validate the Claude-compatible manifest and examples.
 - [x] Update the Connect page and machine-readable instructions for a pinned published package; verify unavailable and configured builds at root and subpath.
-- [ ] Update README, product spec, and MCP documentation. Run full tests, build, browser checks, package smoke, and independent review. The independent review remains pending.
+- [x] Update README, product spec, and MCP documentation. Run full tests, build, browser checks, package smoke, and independent review; fix its findings.
+- [ ] Merge `main` into the branch, resolving the studio page conflicts with the readable URL state, and rerun the full checks.
 - [ ] Publish package and plugin only with an owner-approved publishing identity. Set the website version only after external install succeeds. Report publication and actual client checks separately from local readiness.
 
 ## Superseded remote-hosting plan

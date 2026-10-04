@@ -1,8 +1,10 @@
 import { readFile, writeFile } from "node:fs/promises";
+import type * as z from "zod/v4";
 import { CATALOGUE, CATALOGUE_NAMES, encodeShare, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
+import { localStudioUrl } from "./config";
 import { ShapeJobs } from "./jobs";
+import { documentSchema, previewItemsSchema } from "./schemas";
 
-const SITE = "https://kartollikaa.github.io/material-shape-studio/";
 const jobs = new ShapeJobs();
 const args = process.argv.slice(2);
 
@@ -14,6 +16,18 @@ function option(name: string): string | undefined {
   return value;
 }
 
+function colourOption(): string {
+  const colour = option("colour") ?? "#6750a4";
+  if (!/^#[0-9a-fA-F]{6}$/.test(colour)) throw new Error("--colour must be a hex colour");
+  return colour;
+}
+
+function parsed<T>(schema: z.ZodType<T>, value: unknown): T {
+  const result = schema.safeParse(value);
+  if (result.success) return result.data;
+  throw new Error(result.error.issues.map((issue) => `${issue.path.join(".") || "input"}: ${issue.message}`).join("\n"));
+}
+
 async function jsonFile(file: string | undefined): Promise<unknown> {
   if (!file) throw new Error("--document or --input file is required");
   const bytes = await readFile(file);
@@ -23,6 +37,8 @@ async function jsonFile(file: string | undefined): Promise<unknown> {
 
 async function main(): Promise<unknown> {
   const [command] = args;
+  const site = localStudioUrl();
+  const studioUrl = async (shape: SharedShape) => site + await encodeShare(shape);
   if (command === "list") {
     const filter = option("filter")?.toLowerCase();
     return { shapes: CATALOGUE_NAMES.filter((name) => !filter || name.toLowerCase().includes(filter)).map((name) => ({ name, document: CATALOGUE[name] })) };
@@ -31,29 +47,26 @@ async function main(): Promise<unknown> {
     const name = option("name");
     const file = option("document");
     if (!!name === !!file) throw new Error("provide exactly one of --name or --document");
-    const document = name ? CATALOGUE[name] : await jsonFile(file) as ShapeDocument;
-    if (!document) throw new Error(`unknown catalogue name: ${name}`);
+    if (name && !Object.hasOwn(CATALOGUE, name)) throw new Error(`unknown catalogue name: ${name}`);
+    const colour = colourOption();
+    const document = name ? CATALOGUE[name] : parsed(documentSchema, await jsonFile(file)) as ShapeDocument;
     const result = await jobs.run({ kind: "create", document }) as Record<string, unknown>;
-    const colour = option("colour") ?? "#6750a4";
-    if (!/^#[0-9a-fA-F]{6}$/.test(colour)) throw new Error("--colour must be a hex colour");
-    return { ...result, studioUrl: SITE + await encodeShare({ document, presentation: { colour, theme: "light", context: "button" } }) };
+    return { ...result, studioUrl: await studioUrl({ document, presentation: { colour, theme: "light", context: "button" } }) };
   }
   if (command === "preview") {
-    const shapes = await jsonFile(option("input")) as (SharedShape & { label: string })[];
-    if (!Array.isArray(shapes) || shapes.length < 1 || shapes.length > 4) throw new Error("preview needs one to four shapes");
     const output = option("output");
     if (!output) throw new Error("--output PNG file is required");
-    const links = await Promise.all(shapes.map(async (shape) => SITE + await encodeShare(shape)));
+    const shapes = parsed(previewItemsSchema, await jsonFile(option("input"))) as (SharedShape & { label: string })[];
+    const links = await Promise.all(shapes.map(({ document, presentation }) => studioUrl({ document, presentation })));
     const rendered = await jobs.run({ kind: "preview", shapes }) as { png: string };
     await writeFile(output, Buffer.from(rendered.png, "base64"), { flag: "wx" });
     return { output, links, mediaType: "image/png" };
   }
   if (command === "export") {
-    const document = await jsonFile(option("document")) as ShapeDocument;
     const target = option("target");
-    const colour = option("colour") ?? "#6750a4";
     if (target !== "compose" && target !== "svg" && target !== "css") throw new Error("--target must be compose, svg, or css");
-    if (!/^#[0-9a-fA-F]{6}$/.test(colour)) throw new Error("--colour must be a hex colour");
+    const colour = colourOption();
+    const document = parsed(documentSchema, await jsonFile(option("document"))) as ShapeDocument;
     return jobs.run({ kind: "export", shape: { document, presentation: { colour, theme: "light", context: "button" } }, target });
   }
   throw new Error("usage: shape-studio list [--filter NAME] | create (--name NAME | --document FILE) [--colour HEX] | preview --input SHAPES.json --output FILE.png | export --document FILE --target compose|svg|css [--colour HEX]");

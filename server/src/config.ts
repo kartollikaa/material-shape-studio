@@ -28,3 +28,11 @@ export function envConfig(env = process.env): ServiceConfig {
     maxRequestsPerMinute: positiveInt(env.MAX_REQUESTS_PER_MINUTE, "MAX_REQUESTS_PER_MINUTE", 120),
   };
 }
+
+export const PUBLIC_STUDIO_URL = "https://kartollikaa.github.io/material-shape-studio/";
+
+export function localStudioUrl(env = process.env): string {
+  const studioUrl = env.STUDIO_URL ?? PUBLIC_STUDIO_URL;
+  if (new URL(studioUrl).protocol !== "https:") throw new Error("STUDIO_URL must be an HTTPS URL");
+  return studioUrl.replace(/#.*$/, "");
+}

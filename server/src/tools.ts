@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { CATALOGUE, CATALOGUE_NAMES, encodeShare, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
-import { documentSchema, presentationSchema } from "./schemas";
+import { documentSchema, previewItemsSchema } from "./schemas";
 import { ShapeJobs } from "./jobs";
 import type { ServiceConfig } from "./config";
 
@@ -27,8 +27,8 @@ export function registerShapeTools(server: McpServer, jobs: ShapeJobs, config: P
   }, async ({ name, document, colour }): Promise<ToolResult> => {
     try {
       if (!!name === !!document) throw new Error("provide exactly one of name or document");
+      if (name && !Object.hasOwn(CATALOGUE, name)) throw new Error(`unknown catalogue name: ${name}`);
       const chosen = name ? CATALOGUE[name] : document as ShapeDocument;
-      if (!chosen) throw new Error(`unknown catalogue name: ${name}`);
       const created = await jobs.run({ kind: "create", document: chosen }) as Record<string, unknown>;
       return textResult({ ...created, studioUrl: studioUrl(await encodeShare({ document: chosen, presentation: presentation(colour) })) });
     } catch (error) { return toolError(error); }
@@ -36,7 +36,7 @@ export function registerShapeTools(server: McpServer, jobs: ShapeJobs, config: P
 
   server.registerTool("preview_shapes", {
     description: "Render up to four labelled shapes as a PNG comparison. Each item also gets an editable Studio link, even if your agent host cannot show images.",
-    inputSchema: z.object({ shapes: z.array(z.object({ document: documentSchema, presentation: presentationSchema, label: z.string().min(1).max(60) }).strict()).min(1).max(4) }).strict(),
+    inputSchema: z.object({ shapes: previewItemsSchema }).strict(),
   }, async ({ shapes }): Promise<ToolResult> => {
     try {
       const links = await Promise.all(shapes.map(async (item) => studioUrl(await encodeShare({ document: item.document as ShapeDocument, presentation: item.presentation }))));

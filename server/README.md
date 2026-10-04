@@ -14,7 +14,7 @@ shape-studio preview --input comparison.json --output comparison.png
 shape-studio export --document shape.json --target svg
 ```
 
-`comparison.json` is an array of one to four objects with `document`, `presentation` (`colour`, `theme`, `context`), and `label`. The create result includes the document and editable Studio URL. Export targets are `compose`, `svg`, and `css`.
+`comparison.json` is an array of one to four objects with exactly `document`, `presentation` (`colour` as `#rrggbb`, `theme` `light` or `dark`, `context` `photo`, `button`, or `avatar`), and a `label` of at most 60 characters. Invalid input fails with the offending field on stderr and a nonzero exit. The create result includes the document and editable Studio URL. Export targets are `compose`, `svg`, and `css`.
 
 To register the MCP in Claude Code after publication:
 

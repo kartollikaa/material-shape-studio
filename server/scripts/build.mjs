@@ -1,7 +1,13 @@
 import { build } from "esbuild";
-import { chmod } from "node:fs/promises";
+import { chmod, copyFile } from "node:fs/promises";
+
+const runtimeDependencies = ["@modelcontextprotocol/server", "@resvg/resvg-js", "zod"];
+const executables = ["stdio", "cli"];
+// The HTTP prototype bundles its express adapters, which are devDependencies of the published CLI package.
+const requireShim = 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);';
 
 for (const entry of ["index", "stdio", "cli", "worker"]) {
+  const banner = [executables.includes(entry) ? "#!/usr/bin/env node" : "", entry === "index" ? requireShim : ""].filter(Boolean).join("\n");
   await build({
     entryPoints: [`src/${entry}.ts`],
     outfile: `dist/${entry}.mjs`,
@@ -9,8 +15,9 @@ for (const entry of ["index", "stdio", "cli", "worker"]) {
     format: "esm",
     target: "node24",
     bundle: true,
-    external: ["@modelcontextprotocol/*", "@resvg/resvg-js", "express", "zod"],
-    banner: ["stdio", "cli"].includes(entry) ? { js: "#!/usr/bin/env node" } : undefined,
+    external: entry === "index" ? runtimeDependencies : [...runtimeDependencies, "@modelcontextprotocol/*", "express"],
+    banner: banner ? { js: banner } : undefined,
   });
-  if (["stdio", "cli"].includes(entry)) await chmod(`dist/${entry}.mjs`, 0o755);
+  if (executables.includes(entry)) await chmod(`dist/${entry}.mjs`, 0o755);
 }
+for (const file of ["LICENSE", "NOTICE"]) await copyFile(`../${file}`, file);

@@ -24,3 +24,5 @@ const transform = z.discriminatedUnion("type", [
 export const documentSchema = z.object({ v: z.literal(1), name: z.string().optional(), shape: shapeSchema, transforms: z.array(transform).optional() }).strict();
 export const presentationSchema = z.object({ colour: z.string().regex(/^#[0-9a-fA-F]{6}$/), theme: z.enum(["light", "dark"]), context: z.enum(["photo", "button", "avatar"]) }).strict();
 export const sharedSchema = z.object({ document: documentSchema, presentation: presentationSchema }).strict();
+export const previewItemSchema = z.object({ document: documentSchema, presentation: presentationSchema, label: z.string().min(1).max(60) }).strict();
+export const previewItemsSchema = z.array(previewItemSchema).min(1).max(4);
