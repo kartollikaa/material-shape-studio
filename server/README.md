@@ -19,7 +19,7 @@ shape-studio export --document shape.json --target svg
 To register the MCP in Claude Code after publication:
 
 ```sh
-claude mcp add --transport stdio material-shape-studio -- npx --yes material-shape-studio-mcp@0.1.0
+claude mcp add --transport stdio material-shape-studio -- npx --yes material-shape-studio-mcp@0.1.1
 ```
 
 See the [website's connection page](https://kartollikaa.github.io/material-shape-studio/connect/) for current published version and other hosts. Installation and configuration may require user approval. Do not use an unpublished version from these example commands.

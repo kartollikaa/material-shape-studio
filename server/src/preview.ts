@@ -21,7 +21,7 @@ export function comparisonSvg(items: PreviewItem[]): string {
     } else if (item.presentation.context === "button") {
       picture += `<path d="M${at(0.5, 0.34)}L${at(0.5, 0.66)}M${at(0.34, 0.5)}L${at(0.66, 0.5)}" stroke="white" stroke-width="${size * 0.06}" stroke-linecap="round"/>`;
     } else {
-      picture += `<path d="M${at(0.34, 0.68)}L${at(0.43, 0.32)}L${at(0.5, 0.56)}L${at(0.57, 0.32)}L${at(0.66, 0.68)}M${at(0.38, 0.57)}L${at(0.62, 0.57)}" fill="none" stroke="${foreground}" stroke-width="${size * 0.05}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      picture += `<defs><clipPath id="clip-${index}"><path d="${d}"/></clipPath></defs><g clip-path="url(#clip-${index})" fill="white" fill-opacity="0.9"><circle cx="${left + size * 0.5}" cy="${top + size * 0.38}" r="${size * 0.12}"/><path d="M${at(0.31, 0.71)}C${at(0.31, 0.53)} ${at(0.69, 0.53)} ${at(0.69, 0.71)}Z"/></g>`;
     }
     return `<g transform="translate(${x},0)"><rect x="8" y="8" width="240" height="240" rx="18" fill="${background}"/><svg x="48" y="32" width="160" height="160" viewBox="${left} ${top} ${size} ${size}">${picture}</svg><text x="128" y="220" fill="${foreground}" text-anchor="middle" font-size="16" font-family="sans-serif">${escapeXml(item.label)}</text></g>`;
   }).join("");
