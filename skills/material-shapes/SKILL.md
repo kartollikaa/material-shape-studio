@@ -7,7 +7,7 @@ description: Use when a developer asks an agent to create, invent, compare, refi
 
 Use the local `shape-studio` CLI to make deterministic geometry, then show the resulting preview and editable Studio link to the developer. Never hand-write shape geometry or Compose shape code instead; if the CLI cannot run, say why and offer the web Studio at https://kartollikaa.github.io/material-shape-studio/.
 
-Run every command as `npm exec --yes --package=material-shape-studio-mcp@0.1.1 -- shape-studio ...`. It needs Node.js 24 or newer, network access to the npm registry on first use, and no API key. Ask for any shell approval your host requires.
+Run every command as `npm exec --yes --package=material-shape-studio-mcp@0.1.2 -- shape-studio ...`. It needs Node.js 24 or newer, network access to the npm registry on first use, and no API key. Ask for any shell approval your host requires.
 
 1. Run `shape-studio list --filter NAME` to find one of Material's 35 presets (for example `Cookie7Sided`, `Heart`, `Sunny`), or write a shape document file as described below. When the developer describes a mood or idea instead of naming a preset, or asks you to come up with something, read [references/shape-design.md](references/shape-design.md) first and follow its workflow for inventing shapes.
 2. Run `shape-studio create --name NAME` or `shape-studio create --document shape.json`. Use its returned document as the source of truth and give the developer its editable `studioUrl`. Mention any `warnings`.
