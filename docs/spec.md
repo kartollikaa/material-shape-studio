@@ -156,9 +156,10 @@ hash restores the default shape, colour and export tab, and clears any link noti
 can optionally declare `v=1`; other versions are rejected.
 
 A shape without a catalogue origin, such as a document from an agent, has no named parameters. Its
-address is a `#doc=` fragment holding the shared document and its colour, but not the export tab.
-Opening one decodes it asynchronously, and an edit made before decoding finishes wins. Editing such
-a shape rewrites the fragment once encoding completes; a later edit supersedes a pending write.
+address is the `#doc=` link it was opened from, unchanged while the shape is edited, so the link keeps
+the agent's presentation and reopening it restores the imported reset baseline; edits leave through
+**Copy shape document**. Opening a link decodes it asynchronously: a shape edit made before decoding
+finishes wins, while a tab or colour change keeps the link and the chosen tab.
 
 A hash the codec cannot decode opens the default shape with a dismissible notice, never a blank
 page. Decoding bounds the address length, rejects unknown or duplicate parameters, validates control

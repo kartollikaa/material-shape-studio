@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { build, buildCubics } from "@material-shape-studio/engine";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
-import { decodeShare, encodeShare, previewFrame } from "@material-shape-studio/core";
+import { encodeShare, previewFrame } from "@material-shape-studio/core";
 import { svgPath } from "../export/svg";
 import { displayName, mountStudio } from "./page";
 import { decodeState } from "./url-state";
@@ -185,26 +185,54 @@ describe("the browser address", () => {
     expect(window.location.hash).toBe("");
   });
 
-  it("keeps an edited custom shape in a reopenable link and returns to readable parameters for Material shapes", async () => {
+  it("keeps a linked custom shape's imported link, with its presentation and reset baseline", async () => {
+    const link = await encodeShare({
+      document: { v: 1, shape: { kind: "ngon", vertices: 7 } },
+      presentation: { colour: "#123456", theme: "dark", context: "avatar" },
+    });
     dispose();
     document.body.innerHTML = body;
-    window.history.replaceState(null, "", await encodeShare({
-      document: { v: 1, shape: { kind: "ngon", vertices: 7 } },
-      presentation: { colour: "#123456", theme: "light", context: "button" },
-    }));
+    window.history.replaceState(null, "", link);
     dispose = mountStudio(document);
     await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Custom shape"));
     expect((byId("colour") as HTMLInputElement).value).toBe("#123456");
     slide("Sides", 9);
-    await vi.waitFor(async () => expect((await decodeShare(window.location.hash)).document).toEqual({ v: 1, shape: { kind: "ngon", vertices: 9 } }));
+    openTab("svg");
+    expect(window.location.hash).toBe(link);
+    click(document.querySelector('[data-name="Heart"]')!);
+    expect(window.location.hash).toContain("shape=Heart");
+    click(byId("undo"));
+    expect(slider("Sides").value).toBe("9");
+    expect(window.location.hash).toBe(link);
     const address = window.location.href;
     dispose();
     document.body.innerHTML = body;
     window.history.replaceState(null, "", address);
     dispose = mountStudio(document);
-    await vi.waitFor(() => expect(slider("Sides").value).toBe("9"));
+    await vi.waitFor(() => expect(slider("Sides").value).toBe("7"));
+    slide("Sides", 9);
+    click(byId("reset"));
+    expect(slider("Sides").value).toBe("7");
+  });
+
+  it("keeps a decoding link through a tab change but lets a shape edit win", async () => {
+    const link = await encodeShare({
+      document: { v: 1, shape: { kind: "ngon", vertices: 7 } },
+      presentation: { colour: "#6750a4", theme: "light", context: "button" },
+    });
+    window.history.replaceState(null, "", link);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    openTab("svg");
+    await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Custom shape"));
+    expect(document.querySelector('[data-tab="svg"]')!.getAttribute("aria-selected")).toBe("true");
+    expect(window.location.hash).toBe(link);
     click(document.querySelector('[data-name="Heart"]')!);
-    expect(window.location.hash).toContain("shape=Heart");
+    window.history.replaceState(null, "", link);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    slide("Rotate", 30);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(byId("shape-name").textContent).toBe("Heart");
+    expect(window.location.hash).toContain("rotate=30");
   });
 });
 afterEach(() => {

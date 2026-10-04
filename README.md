@@ -28,9 +28,10 @@ dismissible notice.
 
 Shared `#doc=` links reopen the complete shape document in the editor, including shapes outside the
 catalogue. An imported shape can be adjusted and reset to its imported version. While you edit it, the
-address stays a `#doc=` link carrying the edited document; picking a Material shape switches back to
-named parameters. **Copy shape document** copies the current JSON for another agent or developer. A
-malformed link opens the default shape with the same dismissible notice.
+address keeps the link you opened, so reopening it restores the imported shape; picking a Material
+shape switches back to named parameters. **Copy shape document** copies the current JSON, which is
+how edits to an imported shape travel back to an agent or developer. A malformed link opens the
+default shape with the same dismissible notice.
 
 The [Connect an agent](https://kartollikaa.github.io/material-shape-studio/connect/) page will explain the
 free local CLI, agent plugin, and optional stdio MCP after the package is published. Until then it shows

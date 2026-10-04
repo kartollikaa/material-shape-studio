@@ -18,7 +18,7 @@ test("opens, edits, copies, and resets a custom linked shape", async ({ page }) 
   await expect(page.getByLabel("Sides", { exact: true })).toHaveValue("7");
 });
 
-test("rejects a malformed link and retains the editor", async ({ page }) => {
+test("opens the default shape with a dismissible notice for a malformed link", async ({ page }) => {
   await page.goto("./#doc=bad");
   await expect(page.locator("[data-url-notice]")).toBeVisible();
   await page.locator("[data-url-notice]").getByRole("button", { name: "Dismiss" }).click();

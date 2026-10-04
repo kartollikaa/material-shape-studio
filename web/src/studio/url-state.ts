@@ -1,5 +1,5 @@
 import { build } from "@material-shape-studio/engine";
-import { decodeShare, encodeShare } from "@material-shape-studio/core";
+import { decodeShare } from "@material-shape-studio/core";
 import { CATALOGUE } from "../catalogue";
 import type { Rounding } from "../document";
 import { fromDocument, mainControls, moreControls, pick, round3, type EditorState, type Radii } from "./editor";
@@ -108,20 +108,34 @@ export function decodeState(payload: string): SharedState {
   return validate(readParams(new URLSearchParams(payload)));
 }
 
-async function decodeShapeLink(fragment: string, tab: SharedState["tab"]): Promise<SharedState> {
+type ShapeLink = { fragment: string; initial: string };
+
+async function decodeShapeLink(fragment: string, current: SharedState): Promise<SharedState> {
   const { document, presentation } = await decodeShare(fragment);
   build(JSON.stringify(document));
-  return { v: 1, editor: fromDocument(document), colour: presentation.colour, tab };
+  return { ...current, editor: fromDocument(document), colour: presentation.colour };
 }
 
 export function syncAddress(view: Window, initial: SharedState, apply: (state: SharedState) => void, notice: (message: string) => void) {
   let disposed = false;
   let revision = 0;
+  let latest = initial;
+  let link: ShapeLink | undefined;
   const defaults = JSON.stringify(initial);
   let previous = defaults;
+  const write = (payload: string) => {
+    const url = new URL(view.location.href);
+    url.hash = payload;
+    view.history.replaceState(view.history.state, "", url);
+  };
+  const show = (state: SharedState) => {
+    previous = JSON.stringify(state);
+    latest = state;
+    apply(state);
+  };
   const restoreDefaults = () => {
-    previous = defaults;
-    apply(JSON.parse(defaults));
+    link = undefined;
+    show(JSON.parse(defaults));
     notice("This link could not be opened. The default shape is shown.");
   };
   const load = () => {
@@ -129,22 +143,23 @@ export function syncAddress(view: Window, initial: SharedState, apply: (state: S
     const current = ++revision;
     const hash = view.location.hash;
     if (!hash) {
-      previous = defaults;
-      apply(JSON.parse(defaults));
+      link = undefined;
+      show(JSON.parse(defaults));
       return;
     }
     if (hash.startsWith("#doc=")) {
-      decodeShapeLink(hash, initial.tab).then((state) => {
-        if (disposed || current !== revision) return;
-        previous = JSON.stringify(state);
-        apply(state);
-      }, () => { if (!disposed && current === revision) restoreDefaults(); });
+      const editorAtStart = JSON.stringify(latest.editor);
+      decodeShapeLink(hash, latest).then((state) => {
+        if (disposed || current !== revision || JSON.stringify(latest.editor) !== editorAtStart) return;
+        link = { fragment: hash, initial: JSON.stringify(state.editor.initial) };
+        show({ ...state, tab: latest.tab });
+        if (view.location.hash !== hash) write(hash);
+      }).catch(() => { if (!disposed && current === revision) restoreDefaults(); });
       return;
     }
     try {
-      const state = decodeState(hash.slice(1));
-      previous = JSON.stringify(state);
-      apply(state);
+      link = undefined;
+      show(decodeState(hash.slice(1)));
     } catch {
       if (!disposed) restoreDefaults();
     }
@@ -153,29 +168,20 @@ export function syncAddress(view: Window, initial: SharedState, apply: (state: S
   view.addEventListener("hashchange", load);
   return {
     update(state: SharedState) {
+      latest = state;
       const json = JSON.stringify(state);
       if (json === previous || disposed) return;
       previous = json;
-      const current = ++revision;
-      const write = (payload: string) => {
-        const url = new URL(view.location.href);
-        url.hash = payload;
-        view.history.replaceState(view.history.state, "", url);
-      };
-      const failed = () => {
+      try {
+        let payload: string;
+        if (state.editor.name !== null) payload = encodeState(state);
+        else if (link && link.initial === JSON.stringify(state.editor.initial)) payload = link.fragment;
+        else return;
+        write(payload);
+      } catch {
         if (disposed) return;
         previous = "";
         notice("The address could not be updated. Your edits are still available here.");
-      };
-      if (state.editor.name === null) {
-        encodeShare({ document: state.editor.doc, presentation: { colour: state.colour, theme: "light", context: "button" } })
-          .then((fragment) => { if (!disposed && current === revision) write(fragment); }, failed);
-        return;
-      }
-      try {
-        write(encodeState(state));
-      } catch {
-        failed();
       }
     },
     dispose() { disposed = true; view.removeEventListener("hashchange", load); },
