@@ -1,6 +1,6 @@
 {
   "name": "material-shape-studio",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Create and preview Material shapes with a local CLI",
   "author": { "name": "Material Shape Studio" }
 }
