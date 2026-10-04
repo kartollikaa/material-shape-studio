@@ -7,8 +7,10 @@ it("escapes agent-supplied labels and uses only generated geometry", () => {
   expect(svg).toContain("&lt;script&gt;");
 });
 
-it("draws the avatar placeholder as a person silhouette clipped to the shape", () => {
+it("draws the avatar placeholder as a single stroked letter A", () => {
   const svg = comparisonSvg([{ cubics: [0, 0, 0, 0, 1, 1, 1, 1], bounds: [0, 0, 1, 1], label: "Avatar", presentation: { colour: "#6750a4", theme: "light", context: "avatar" } }]);
-  expect(svg).toMatch(/<g clip-path="url\(#clip-0\)" fill="white"[^>]*><circle /);
-  expect(svg).not.toContain("stroke=");
+  const letters = [...svg.matchAll(/<path d="([^"]+)" fill="none" stroke="white"/g)].map((match) => match[1]);
+  expect(letters).toHaveLength(1);
+  expect(letters[0].match(/M/g)).toHaveLength(2);
+  expect(letters[0].match(/L/g)).toHaveLength(3);
 });
