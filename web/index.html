@@ -13,7 +13,6 @@
     <header>
       <div class="brand">
         <h1>Material Shape Studio</h1>
-        <p>Pick a shape. Make it yours.</p>
       </div>
       <span class="spacer"></span>
       <a href="./connect/">Connect an agent</a>
@@ -24,9 +23,12 @@
     </header>
     <main>
       <section class="col-picker" aria-labelledby="pick-heading">
+        <button id="change-shape" aria-expanded="false" aria-controls="shape-catalogue">Change shape</button>
+        <div id="shape-catalogue">
         <div class="section-heading"><h2 id="pick-heading">Pick a shape</h2><span class="count">35</span></div>
         <div class="picker" id="picker"></div>
         <p class="caption" id="caption"></p>
+        </div>
       </section>
       <section class="col-center" aria-labelledby="shape-name">
         <div class="stage">
@@ -35,21 +37,17 @@
             <button class="small" id="reset" hidden>Reset</button>
           </div>
           <svg class="preview" id="preview" role="group" aria-label="Shape preview"></svg>
-          <p class="hint" id="stage-hint">Drag a dot to reshape. The whole pattern follows, because each dot repeats around the centre.</p>
+          <p class="hint" id="stage-hint">Dots define the construction pattern, before rounding. Drag a dot or use arrow keys; the pattern repeats around the centre.</p>
           <p class="error" id="error" role="status" hidden></p>
-          <div class="error" id="share-notice" role="status" hidden><span id="share-error"></span> <button id="share-dismiss" type="button" aria-label="Dismiss shape link error">Dismiss</button></div>
           <p class="hint" id="bounds-warning" hidden>This shape extends outside the unit square. Compose may scale it differently in a component.</p>
-          <div class="in-use" id="in-use" aria-label="Shape in use"></div>
         </div>
+        <div class="in-use" id="in-use" aria-label="Shape in use"></div>
       </section>
       <section class="col-adjust" aria-labelledby="adjust-heading">
           <h2 id="adjust-heading">Adjust shape</h2>
           <div id="controls"></div>
+          <div id="dot-actions" class="buttons" aria-label="Edit dots"></div>
           <label class="colour"><input type="color" id="colour" value="#6750a4" /> Colour <span class="why">used in the preview and the exports</span></label>
-          <details id="more">
-            <summary>More options</summary>
-            <div id="more-controls"></div>
-          </details>
       </section>
       <section class="col-export" aria-labelledby="export-heading">
         <div class="export-heading">
@@ -64,7 +62,7 @@
         <p class="about" id="export-about"></p>
         <div class="buttons" id="export-buttons"></div>
         <button id="copy-document">Copy shape document</button>
-        <pre id="export-code" aria-label="Exported code"></pre>
+        <details id="code-details"><summary>Show code</summary><pre id="export-code" aria-label="Exported code"></pre></details>
       </section>
     </main>
     <footer>

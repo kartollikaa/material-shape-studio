@@ -13,12 +13,24 @@ button and an avatar, and export it as Compose code, SVG, PNG or CSS. An untouch
 as Material's own `MaterialShapes` entry.
 
 The focused canvas keeps the catalogue on the left, the shape in the centre, and its controls on
-the right, with exports below. On smaller screens those sections stack. Adjustments keep keyboard
-focus and the page's scroll position, so editing a slider does not pull the page back up.
+the right, with export actions beside the editor and full code behind **Show code**. On phones,
+**Change shape** opens the catalogue and a compact preview stays visible during adjustment.
+Construction dots and guides are available immediately on polygon shapes. Slider values are also editable:
+type an angle or percentage directly. Adjustments keep keyboard focus and the page's scroll
+position, so editing a value does not pull the page back up.
+
+The browser address updates automatically as you edit. Copy its URL to share or save the shape:
+opening it restores the adjustments, edited dots, colour and export tab. Named parameters such as
+`#shape=Heart&rotate=45&roundness=125&colour=123456&tab=svg` can be edited directly in the address bar.
+Values use the controls' displayed units; custom dot geometry is included as JSON when needed.
+No account or server is needed. An invalid link opens the default shape with a
+dismissible notice.
 
 Shared `#doc=` links reopen the complete shape document in the editor, including shapes outside the
-catalogue. An imported shape can be adjusted and reset to its imported version. **Copy shape document**
-copies the current JSON for another agent or developer; malformed links leave the regular editor usable.
+catalogue. An imported shape can be adjusted and reset to its imported version. While you edit it, the
+address stays a `#doc=` link carrying the edited document; picking a Material shape switches back to
+named parameters. **Copy shape document** copies the current JSON for another agent or developer. A
+malformed link opens the default shape with the same dismissible notice.
 
 The [Connect an agent](https://kartollikaa.github.io/material-shape-studio/connect/) page will explain the
 free local CLI, agent plugin, and optional stdio MCP after the package is published. Until then it shows

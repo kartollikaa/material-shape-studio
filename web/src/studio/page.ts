@@ -1,7 +1,6 @@
 import { build, buildCubics, version } from "@material-shape-studio/engine";
 import { previewFrame } from "@material-shape-studio/core";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
-import { loadSharedShape } from "./share";
 import type { ShapeDocument, Transform } from "../document";
 import { cssRule } from "../export/css";
 import { kotlinFile } from "../export/kotlin";
@@ -11,6 +10,7 @@ import {
   viewTransforms, type Control, type EditorState,
 } from "./editor";
 import { backward, forward, squareAround, type Box } from "./geometry";
+import { syncAddress } from "./url-state";
 
 type Tab = "compose" | "svg" | "png" | "css";
 type Built = { cubics: number[]; bounds: [number, number, number, number] };
@@ -35,10 +35,12 @@ export function mountStudio(page: Document) {
   let state: EditorState = pick("Cookie4Sided");
   let colour = "#6750a4";
   let tab: Tab = "compose";
+  let address: ReturnType<typeof syncAddress> | undefined;
   let dragging = false;
   let frozenBox: Box | null = null;
   let lastGood: Built | null = null;
-  const history = new History();
+  let controlTimer: ReturnType<typeof setTimeout> | undefined;
+  let history = new History();
   const remember = () => history.remember(snapshot(state));
   const buildDoc = (doc: ShapeDocument): Built => JSON.parse(build(JSON.stringify(doc)));
   const pathOf = (cubics: ArrayLike<number>) => svgPath(cubics, 1, 4);
@@ -75,7 +77,13 @@ export function mountStudio(page: Document) {
         b.dataset.name = name;
         b.setAttribute("aria-label", displayName(name));
         svg("path", { d: thumbs[name].d }, svg("svg", { viewBox: thumbs[name].box, "aria-hidden": "true" }, b));
-        b.addEventListener("click", () => { remember(); state = pick(name); lastGood = null; render(); });
+        b.addEventListener("click", () => {
+          remember(); state = pick(name); lastGood = null; render();
+          if ($("change-shape").getAttribute("aria-expanded") === "true") {
+            $("change-shape").setAttribute("aria-expanded", "false");
+            $("change-shape").focus({ preventScroll: true });
+          }
+        });
         b.addEventListener("pointerenter", () => { $("caption").textContent = displayName(name); });
         b.addEventListener("pointerleave", () => { $("caption").textContent = `Selected: ${displayName(state.name ?? "Custom shape")}`; });
         container.appendChild(b);
@@ -90,8 +98,12 @@ export function mountStudio(page: Document) {
     const id = `control-${container.id}-${container.childElementCount}`;
     const top = html("div", { className: "top" });
     const label = html("label", { htmlFor: id, textContent: c.label });
-    const out = html("output");
-    out.setAttribute("for", id);
+    const scale = c.scale ?? 1;
+    const value = html("input", { type: "number", min: String(c.min * scale), max: String(c.max * scale), step: String(c.step * scale) });
+    value.setAttribute("aria-label", `${c.label} value`);
+    value.dataset.focus = `value:${c.label}`;
+    const out = html("span", { className: "control-value" });
+    out.append(value, html("span", { textContent: c.unit ?? "" }));
     top.append(label, out);
     wrap.appendChild(top);
     const range = html("input", { type: "range", id, min: String(c.min), max: String(c.max), step: String(c.step) });
@@ -99,9 +111,10 @@ export function mountStudio(page: Document) {
     if (c.why) {
       wrap.appendChild(html("p", { className: "why", id: `${id}-why`, textContent: c.why }));
       range.setAttribute("aria-describedby", `${id}-why`);
+      value.setAttribute("aria-describedby", `${id}-why`);
     }
     const show = (v: number) => {
-      out.textContent = c.show(v);
+      value.value = String(round3(v * scale));
       range.setAttribute("aria-valuetext", c.show(v));
     };
     range.value = String(c.get());
@@ -115,6 +128,18 @@ export function mountStudio(page: Document) {
       renderLive();
     });
     range.addEventListener("change", () => { started = false; render(); });
+    const commitValue = (deferRender = false) => {
+      if (!value.value || !Number.isFinite(value.valueAsNumber)) { show(c.get()); return; }
+      const bounded = Math.max(c.min, Math.min(c.max, value.valueAsNumber / scale));
+      const next = round3(c.min + Math.round((bounded - c.min) / c.step) * c.step);
+      if (next !== c.get()) { remember(); c.set(next); }
+      updateAddress();
+      clearTimeout(controlTimer);
+      if (deferRender) controlTimer = setTimeout(render, 0);
+      else render();
+    };
+    value.addEventListener("change", () => commitValue(true));
+    value.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitValue(); } });
     wrap.appendChild(range);
     container.appendChild(wrap);
   }
@@ -131,30 +156,26 @@ export function mountStudio(page: Document) {
     $("shape-status").textContent = isEdited(state) ? "Edited shape" : state.name ? "Material original" : "Custom shape";
     $("reset").hidden = !isEdited(state);
     const main = $("controls");
-    const controls = mainControls(state);
+    const controls = [...mainControls(state), ...moreControls(state)];
     refill(main, () => {
       controls.forEach((c) => controlRow(main, c));
       if (state.doc.shape.kind === "circle" && controls.length === 1) {
         const space = html("div", { className: "control control-space" });
         space.setAttribute("aria-hidden", "true");
         const top = html("div", { className: "top" });
-        top.appendChild(html("span", { textContent: "Rotate" }));
+        top.append(html("span", { textContent: "Rotate" }), html("input", { type: "number", disabled: true }));
         space.append(top, html("input", { type: "range", disabled: true }));
         main.appendChild(space);
       }
     });
-    const more = $("more-controls");
-    const extra = moreControls(state);
     const polygon = state.doc.shape.kind === "polygon";
-    refill(more, () => {
-      extra.forEach((c) => controlRow(more, c));
+    const buttons = $("dot-actions");
+    buttons.hidden = !polygon;
+    refill(buttons, () => {
       if (!polygon) return;
-      const buttons = html("div", { className: "buttons" });
       actionButton(buttons, "Add a dot", () => addDot(state));
       actionButton(buttons, "Remove the selected dot", () => removeDot(state), !canRemoveDot(state));
-      more.appendChild(buttons);
     });
-    $("more").hidden = !extra.length && !polygon;
   }
 
   function buildPreview(transforms: Transform[]): Built | null {
@@ -186,6 +207,11 @@ export function mountStudio(page: Document) {
       frozenBox = box;
       preview.setAttribute("viewBox", box.join(" "));
       svg("path", { d: pathOf(built.cubics), fill: colour }, preview);
+      if (dots.length) svg("polyline", { class: "construction", points: dots.map((p) => p.join(",")).join(" "), "aria-hidden": "true" }, preview);
+      dots.forEach(([x, y], i) => {
+        const target = svg("circle", { cx: x, cy: y, r: box[2] * 0.02, class: "dot-target", "aria-hidden": "true" }, preview);
+        target.addEventListener("pointerdown", (e) => startDrag(e as PointerEvent, i));
+      });
       dots.forEach(([x, y], i) => {
         const dot = svg("circle", {
           cx: x, cy: y, r: box[2] * 0.02, class: `dot${i === state.selected ? " selected" : ""}`,
@@ -335,10 +361,12 @@ export function mountStudio(page: Document) {
       buttons.appendChild(b);
     }));
     $("export-code").textContent = cubics ? current.code(cubics) : "";
+    $("code-details").hidden = tab === "png";
   }
 
   let liveTimer: ReturnType<typeof setTimeout> | undefined;
   function renderLive() {
+    updateAddress();
     renderShape();
     clearTimeout(liveTimer);
     liveTimer = setTimeout(() => {
@@ -349,8 +377,9 @@ export function mountStudio(page: Document) {
   }
 
   function render() {
+    updateAddress();
     const view = page.defaultView;
-    const scroll = view && page.activeElement?.matches('input[type="range"]') ? [view.scrollX, view.scrollY] : null;
+    const scroll = view && page.activeElement?.matches('input[type="range"], input[type="number"]') ? [view.scrollX, view.scrollY] : null;
     renderPicker();
     renderControls();
     renderShape();
@@ -380,6 +409,10 @@ export function mountStudio(page: Document) {
   };
 
   $("undo").addEventListener("click", undo);
+  $("change-shape").addEventListener("click", () => {
+    const button = $("change-shape");
+    button.setAttribute("aria-expanded", String(button.getAttribute("aria-expanded") !== "true"));
+  });
   $("redo").addEventListener("click", redo);
   $("reset").addEventListener("click", () => {
     remember();
@@ -395,13 +428,13 @@ export function mountStudio(page: Document) {
       () => { button.textContent = "Copy failed"; },
     );
   });
-  $("share-dismiss").addEventListener("click", () => { $("share-notice").hidden = true; });
   $("colour").addEventListener("input", (e) => { colour = (e.target as HTMLInputElement).value; renderLive(); });
   $("tabs").addEventListener("click", (e) => {
     const chosen = (e.target as HTMLElement).dataset?.tab as Tab | undefined;
     if (!chosen) return;
     tab = chosen;
     renderExport(normalizedCubics());
+    updateAddress();
   });
   $("tabs").addEventListener("keydown", (e) => {
     const step = ({ ArrowLeft: -1, ArrowRight: 1 } as Record<string, number>)[e.key];
@@ -436,35 +469,33 @@ export function mountStudio(page: Document) {
   const versions = JSON.parse(version());
   $("engine-version").textContent = versions.graphicsShapes;
   render();
-  let linkRevision = 0;
-  const loadLink = async () => {
-    const hash = page.defaultView?.location.hash ?? "";
-    if (!hash.startsWith("#doc=")) return;
-    const current = ++linkRevision;
-    const before = JSON.stringify(state.doc);
-    try {
-      const shared = await loadSharedShape(page, hash);
-      if (!shared) return;
-      buildDoc(shared.document);
-      if (current !== linkRevision || before !== JSON.stringify(state.doc)) return;
-      state = fromDocument(shared.document);
-      colour = shared.presentation.colour;
-      ($("colour") as HTMLInputElement).value = colour;
-      $("share-notice").hidden = true;
-      lastGood = null;
-      render();
-    } catch (error) {
-      if (current !== linkRevision) return;
-      $("share-error").textContent = `That shape link could not be opened: ${(error as Error).message}`;
-      $("share-notice").hidden = false;
-    }
-  };
-  page.defaultView?.addEventListener("hashchange", loadLink);
-  void loadLink();
+  function updateAddress() {
+    address?.update({ v: 1, editor: state, colour, tab });
+  }
+  const view = page.defaultView;
+  if (view) address = syncAddress(view, { v: 1, editor: state, colour, tab }, (saved) => {
+    page.querySelector("[data-url-notice]")?.remove();
+    history = new History();
+    state = saved.editor;
+    colour = saved.colour;
+    tab = saved.tab;
+    ($("colour") as HTMLInputElement).value = colour;
+    lastGood = null;
+    render();
+  }, (message) => {
+    page.querySelector("[data-url-notice]")?.remove();
+    const notice = html("div", { className: "error" });
+    notice.dataset.urlNotice = "";
+    notice.setAttribute("role", "status");
+    const dismiss = html("button", { textContent: "Dismiss" });
+    dismiss.addEventListener("click", () => notice.remove());
+    notice.append(html("p", { textContent: message }), dismiss);
+    page.querySelector("header")?.after(notice);
+  });
   return () => {
-    linkRevision++;
+    address?.dispose();
+    clearTimeout(controlTimer);
     clearTimeout(liveTimer);
     page.defaultView?.removeEventListener("keydown", onKey);
-    page.defaultView?.removeEventListener("hashchange", loadLink);
   };
 }

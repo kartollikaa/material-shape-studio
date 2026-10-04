@@ -56,8 +56,8 @@ web/                    Vite + TypeScript, no UI framework; workspace member dep
 An external `#doc=` fragment is decoded with bounded decompression, then validated by the engine
 before it replaces the current editor document. Imported documents have no catalogue identity and
 retain their own reset baseline. The user can copy the current JSON after editing and return it to
-an agent. Invalid links show a dismissible notice without disabling the normal editor; shapes
-outside the unit square show a warning near the preview.
+an agent. An invalid `#doc=` link opens the default shape with the same dismissible notice as any
+other undecodable hash; shapes outside the unit square show a warning near the preview.
 Testing or running anything that imports the engine needs `./gradlew build` first, which runs the
 engine's tests and syncs the whole-program ES module and its `.d.mts` into `dist/`; `npm test` refuses
 to run without it. CI does both. `wasmJs` is a later optional target of the same module, not part of v1.
@@ -140,10 +140,30 @@ constructor. Any other document, including an edited catalogue shape, exports as
 
 ### URL codec
 
-The hash holds a query string: `#doc=<payload>`.
-A payload is `base64url(deflate-raw(JSON))`, produced with the browser's `CompressionStream`, no
-dependency. A hash the codec cannot decode opens the default shape with a dismissable notice, never
-a blank page. The codec is a pure module with its own tests; nothing else touches `location.hash`.
+The hash holds human-readable named parameters, for example
+`#shape=Heart&rotate=45&roundness=125&colour=123456&tab=svg`. `shape` names the catalogue origin;
+control parameters use the displayed units, so roundness, softness, depth and squash use percentages,
+and rotate uses degrees. Controls at their catalogue defaults are omitted. Colour is a hex value
+without its leading `#`, and `tab` names the export format. `selected` preserves the selected dot.
+Optional `geometry`, `base` and `transforms` parameters carry ordinary URL-escaped JSON for edits
+that the named controls cannot reproduce, including custom dot positions and base corner radii.
+Named control values apply after that geometry, so editing a value in the address bar takes effect.
+
+The address updates synchronously during edits, including undo, redo and reset, using
+`history.replaceState` to preserve browser history. Copying the browser address shares the current
+state; no share button is needed. Opening or editing the hash restores the editor. Removing the
+hash restores the default shape, colour and export tab, and clears any link notice. The parameters
+can optionally declare `v=1`; other versions are rejected.
+
+A shape without a catalogue origin, such as a document from an agent, has no named parameters. Its
+address is a `#doc=` fragment holding the shared document and its colour, but not the export tab.
+Opening one decodes it asynchronously, and an edit made before decoding finishes wins. Editing such
+a shape rewrites the fragment once encoding completes; a later edit supersedes a pending write.
+
+A hash the codec cannot decode opens the default shape with a dismissible notice, never a blank
+page. Decoding bounds the address length, rejects unknown or duplicate parameters, validates control
+ranges and editor metadata, and limits geometry before passing the document to the engine's validation. The codec has its own tests;
+only its address synchronisation module reads the URL hash or writes the browser address.
 
 ## 4. Engine façade
 
@@ -194,23 +214,30 @@ Every piece exists because one of the three jobs needs it: pick a shape, adjust 
 app. It follows the system's light or dark setting.
 
 The focused canvas places the catalogue on the left, the preview in the centre, and adjustments on
-the right. Exports sit below the preview and adjustments. Smaller screens stack these sections in
-reading order. The canvas names the selected shape and distinguishes Material's original from an
+the right in a wider panel that gives labels and numeric inputs room. Export actions sit below the adjustments, with full code behind **Show code**. Smaller
+screens stack these sections in reading order. On phones, **Change shape** toggles the catalogue;
+picking a shape closes it and returns focus to the toggle. The compact canvas stays visible while
+adjustments scroll. The canvas names the selected shape and distinguishes Material's original from an
 edited shape; Reset lives beside that name.
 
 - **Pick a shape**: the 35 catalogue shapes as thumbnails; hovering names one, and
   picking one replaces the current shape.
-- **Preview**: the shape at full size in the chosen colour. Polygon shapes show their slice's dots;
+- **Preview**: the shape at full size in the chosen colour. Polygon shapes immediately show their
+  slice dots and faint construction guides, explaining vertices outside the rounded outline;
   dragging a dot moves that vertex, and the repeated pattern follows. Arrow keys nudge the selected
-  dot, Shift for larger steps. Below it, **In use** shows the shape as a photo, an icon button and an
+  dot, Shift for larger steps. Transparent pointer targets extend beyond the visible dots without
+  shrinking with the preview. Below it, **In use** shows the shape as a photo, an icon button and an
   avatar.
-- **Adjust shape**: only the sliders that change the selected shape, each but Rotate with a one-line
+- **Adjust shape**: sliders and editable numeric values that change the selected shape. Numeric
+  values use the displayed units, commit on Enter or blur, clamp to the control's range, and
+  reject empty values without changing the shape. Each control but Rotate includes a short
   reason: Repeats for patterns that repeat, Points and Depth for stars, Sides for n-gons, Proportion
   for rectangles, Squash for circles, Roundness, and Rotate where it shows. Roundness scales every
   corner of Material's recipe together; sharp shapes start at 0%. Then Colour, used in the preview
-  and the exports. **Reset** appears once the shape differs from Material's. **More options**,
-  closed by default, holds Softness, the roundness of the selected dot, and adding or removing a
-  dot; removal never leaves fewer than three corners or changes a one-off shape's repeats.
+  and the exports. **Reset** appears once the shape differs from Material's. Polygon shapes show
+  all relevant properties in one list, including Softness and the roundness of the selected dot,
+  with **Add a dot** and **Remove the selected dot** directly below. Removal never leaves fewer than
+  three corners or changes a one-off shape's repeats.
 - **Take it into your app**: tabs for Compose, SVG, PNG and CSS (§7), each with a one-line description, its
   copy or download buttons, and the code where there is code.
 - **Undo and Redo** in the header, and Ctrl+Z / Ctrl+Shift+Z, step through every edit.
@@ -224,7 +251,9 @@ Restoring focus after an edit never scrolls the page. The canvas reserves space 
 dot hint, and the code preview keeps a stable height as a slider updates the export, so edits near
 the bottom do not jump the page upward. Circle adjustments reserve space for Rotate while it is
 unavailable, so introducing or removing it does not change the page height. Slider commits also
-preserve the viewport when their edit changes the controls.
+preserve the viewport when their edit changes the controls, as do numeric value commits.
+Numeric blur commits allow native focus navigation to finish before rebuilding controls, so Tab
+continues to the next input instead of losing focus when its previous input is replaced.
 
 ## 7. Exporters
 

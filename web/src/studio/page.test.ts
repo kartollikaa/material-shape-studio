@@ -3,9 +3,10 @@ import { resolve } from "node:path";
 import { build, buildCubics } from "@material-shape-studio/engine";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
-import { encodeShare, previewFrame } from "@material-shape-studio/core";
+import { decodeShare, encodeShare, previewFrame } from "@material-shape-studio/core";
 import { svgPath } from "../export/svg";
 import { displayName, mountStudio } from "./page";
+import { decodeState } from "./url-state";
 
 vi.mock("@material-shape-studio/engine", async (importOriginal) => {
   const engine = await importOriginal<typeof import("@material-shape-studio/engine")>();
@@ -21,7 +22,7 @@ const labels = (selector: string) => Array.from(document.querySelectorAll(select
 const exportCode = () => byId("export-code").textContent ?? "";
 const openTab = (name: string) => click(document.querySelector(`[data-tab=${name}]`)!);
 const slider = (label: string) =>
-  Array.from(document.querySelectorAll("#controls .control")).find((c) => c.querySelector("label")?.textContent === label)!.querySelector("input")!;
+  Array.from(document.querySelectorAll("#controls .control")).find((c) => c.querySelector("label")?.textContent === label)!.querySelector<HTMLInputElement>('input[type="range"]')!;
 function drag(label: string, value: number) {
   const input = slider(label);
   input.value = String(value);
@@ -41,8 +42,170 @@ const undoButton = () => byId("undo") as HTMLButtonElement;
 
 let dispose: () => void;
 beforeEach(() => {
+  window.history.replaceState(null, "", "/");
   document.body.innerHTML = body;
   dispose = mountStudio(document);
+});
+
+describe("the browser address", () => {
+  it("automatically carries live edits, colour and export format into a reopened editor", async () => {
+    click(document.querySelector('[data-name="Heart"]')!);
+    drag("Rotate", 45);
+    drag("Roundness", 1.25);
+    const colour = byId("colour") as HTMLInputElement;
+    colour.value = "#123456";
+    colour.dispatchEvent(new Event("input"));
+    openTab("svg");
+    await vi.waitFor(() => expect(window.location.hash).toContain("shape=Heart"));
+    expect(window.location.hash).toContain("rotate=45");
+    expect(window.location.hash).toContain("roundness=125");
+    await vi.waitFor(async () => expect((await decodeState(window.location.hash.slice(1))).tab).toBe("svg"));
+    const address = window.location.href;
+    const path = document.querySelector("#preview path")!.getAttribute("d");
+    const code = exportCode();
+    dispose();
+    document.body.innerHTML = body;
+    window.history.replaceState(null, "", address);
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Heart"));
+    expect(slider("Rotate").value).toBe("45");
+    expect(slider("Roundness").value).toBe("1.25");
+    expect((byId("colour") as HTMLInputElement).value).toBe("#123456");
+    expect(document.querySelector('[data-tab="svg"]')!.getAttribute("aria-selected")).toBe("true");
+    expect(document.querySelector("#preview path")!.getAttribute("d")).toBe(path);
+    expect(exportCode()).toBe(code);
+    slide("Roundness", 1.5);
+    expect(slider("Roundness").value).toBe("1.5");
+  });
+
+  it("updates the address after undo, redo and reset without adding browser history entries", async () => {
+    const length = window.history.length;
+    slide("Rotate", 30);
+    await vi.waitFor(() => expect(window.location.hash).not.toBe(""));
+    const edited = window.location.hash;
+    click(byId("undo"));
+    await vi.waitFor(() => expect(window.location.hash).not.toBe(edited));
+    const original = window.location.hash;
+    click(byId("redo"));
+    await vi.waitFor(() => expect(window.location.hash).toBe(edited));
+    click(byId("reset"));
+    await vi.waitFor(() => expect(window.location.hash).toBe(original));
+    expect(window.history.length).toBe(length);
+  });
+
+  it("keeps the last rapid edit in the address and preserves moved and added dots", async () => {
+    for (let angle = 1; angle <= 30; angle++) drag("Rotate", angle);
+    click(document.querySelector("#dot-actions button")!);
+    press("ArrowRight", { shiftKey: true });
+    await vi.waitFor(async () => {
+      const saved = await decodeState(window.location.hash.slice(1));
+      expect(saved.editor.doc.transforms).toContainEqual({ type: "rotate", degrees: 30 });
+      expect(saved.editor.selected).toBe(1);
+      expect(saved.editor.doc.shape.kind).toBe("polygon");
+      if (saved.editor.doc.shape.kind === "polygon") expect(saved.editor.doc.shape.vertices).toHaveLength(3);
+    });
+    const path = document.querySelector("#preview path")!.getAttribute("d");
+    const dot = position(selectedDot());
+    dispose();
+    document.body.innerHTML = body;
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(dots()).toHaveLength(3));
+    expect(document.querySelector("#preview path")!.getAttribute("d")).toBe(path);
+    expect(position(selectedDot())).toEqual(dot);
+  });
+
+  it("opens a corrupt address with a usable default shape and a dismissible notice", async () => {
+    dispose();
+    window.history.replaceState(null, "", "#doc=broken");
+    document.body.innerHTML = body;
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(document.querySelector('[data-url-notice]')).not.toBeNull());
+    expect(byId("shape-name").textContent).toBe("Cookie 4 Sided");
+    click(document.querySelector('[data-url-notice] button')!);
+    expect(document.querySelector('[data-url-notice]')).toBeNull();
+    slide("Rotate", 30);
+    expect(slider("Rotate").value).toBe("30");
+  });
+
+  it("restores the default when a corrupt link replaces the hash in an open editor", async () => {
+    click(document.querySelector('[data-name="Heart"]')!);
+    slide("Rotate", 45);
+    window.history.replaceState(null, "", "#doc=broken");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await vi.waitFor(() => expect(document.querySelector('[data-url-notice]')).not.toBeNull());
+    expect(byId("shape-name").textContent).toBe("Cookie 4 Sided");
+    expect(slider("Rotate").value).toBe("0");
+  });
+
+  it("applies a value edited directly in the address bar", async () => {
+    slide("Rotate", 30);
+    await vi.waitFor(() => expect(window.location.hash).toContain("rotate=30"));
+    window.history.replaceState(null, "", window.location.hash.replace("rotate=30", "rotate=75"));
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await vi.waitFor(() => expect(slider("Rotate").value).toBe("75"));
+  });
+
+  it("clears a bad-link notice when the address is corrected", () => {
+    window.history.replaceState(null, "", "#broken");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(document.querySelector("[data-url-notice]")).not.toBeNull();
+    window.history.replaceState(null, "", "#shape=Heart&rotate=75");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(slider("Rotate").value).toBe("75");
+    expect(document.querySelector("[data-url-notice]")).toBeNull();
+  });
+
+  it("updates the address immediately when a numeric edit defers rendering to preserve focus", () => {
+    vi.useFakeTimers();
+    const value = document.querySelector<HTMLInputElement>('[aria-label="Rotate value"]')!;
+    value.value = "45";
+    value.dispatchEvent(new Event("change"));
+    expect(window.location.hash).toContain("rotate=45");
+  });
+
+  it("restores the default editor when all URL parameters are removed", () => {
+    click(document.querySelector('[data-name="Heart"]')!);
+    slide("Rotate", 45);
+    openTab("svg");
+    window.history.replaceState(null, "", "/");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(byId("shape-name").textContent).toBe("Cookie 4 Sided");
+    expect(slider("Rotate").value).toBe("0");
+    expect(document.querySelector('[data-tab="compose"]')!.getAttribute("aria-selected")).toBe("true");
+    expect(window.location.hash).toBe("");
+  });
+
+  it("clears a bad-link notice when all URL parameters are removed", () => {
+    window.history.replaceState(null, "", "#broken");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(document.querySelector("[data-url-notice]")).not.toBeNull();
+    window.history.replaceState(null, "", "/");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(document.querySelector("[data-url-notice]")).toBeNull();
+    expect(window.location.hash).toBe("");
+  });
+
+  it("keeps an edited custom shape in a reopenable link and returns to readable parameters for Material shapes", async () => {
+    dispose();
+    document.body.innerHTML = body;
+    window.history.replaceState(null, "", await encodeShare({
+      document: { v: 1, shape: { kind: "ngon", vertices: 7 } },
+      presentation: { colour: "#123456", theme: "light", context: "button" },
+    }));
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Custom shape"));
+    expect((byId("colour") as HTMLInputElement).value).toBe("#123456");
+    slide("Sides", 9);
+    await vi.waitFor(async () => expect((await decodeShare(window.location.hash)).document).toEqual({ v: 1, shape: { kind: "ngon", vertices: 9 } }));
+    const address = window.location.href;
+    dispose();
+    document.body.innerHTML = body;
+    window.history.replaceState(null, "", address);
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(slider("Sides").value).toBe("9"));
+    click(document.querySelector('[data-name="Heart"]')!);
+    expect(window.location.hash).toContain("shape=Heart");
+  });
 });
 afterEach(() => {
   dispose();
@@ -75,19 +238,65 @@ describe("the studio page", () => {
     expect(JSON.parse(writeText.mock.calls[0][0])).toEqual({ v: 1, shape: { kind: "ngon", vertices: 8 } });
   });
 
-  it("recovers from a malformed shared shape", async () => {
-    dispose();
-    document.body.innerHTML = body;
-    window.location.hash = "#doc=not-a-shape";
-    dispose = mountStudio(document);
-    await vi.waitFor(() => expect(byId("share-notice").hidden).toBe(false));
-    expect(byId("shape-name").textContent).toBe("Cookie 4 Sided");
-    click(byId("share-dismiss"));
-    expect(byId("share-notice").hidden).toBe(true);
+  it("starts with editable dots and point-specific controls without a mode toggle", () => {
+    expect(byId("edit-points")).toBeNull();
+    expect(dots()).toHaveLength(2);
+    expect(labels("#controls label")).toContain("Roundness of the selected dot");
+    expect(labels("#dot-actions button")).toEqual(["Add a dot", "Remove the selected dot"]);
+  });
+
+  it("closes the compact picker and returns focus after selecting a shape", () => {
+    click(byId("change-shape"));
+    expect(byId("change-shape").getAttribute("aria-expanded")).toBe("true");
     click(document.querySelector('[data-name="Heart"]')!);
+    expect(byId("change-shape").getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(byId("change-shape"));
     expect(byId("shape-name").textContent).toBe("Heart");
   });
 
+  it("accepts displayed numeric units, clamps values, and restores numeric focus", () => {
+    vi.useFakeTimers();
+    const value = () => document.querySelector<HTMLInputElement>('[aria-label="Roundness value"]')!;
+    expect(value().value).toBe("100");
+    value().focus();
+    value().value = "125";
+    value().dispatchEvent(new Event("change"));
+    vi.runOnlyPendingTimers();
+    expect(slider("Roundness").value).toBe("1.25");
+    expect(document.activeElement).toBe(value());
+    click(byId("undo"));
+    expect(value().value).toBe("100");
+    value().value = "999";
+    value().dispatchEvent(new Event("change"));
+    vi.runOnlyPendingTimers();
+    expect(value().value).toBe("250");
+    value().value = "";
+    value().dispatchEvent(new Event("change"));
+    vi.runOnlyPendingTimers();
+    expect(value().value).toBe("250");
+  });
+
+  it("lets native Tab move focus before rebuilding numeric controls", () => {
+    vi.useFakeTimers();
+    const value = document.querySelector<HTMLInputElement>('[aria-label="Rotate value"]')!;
+    value.focus();
+    value.value = "45";
+    value.dispatchEvent(new Event("change"));
+    expect(value.isConnected).toBe(true);
+    slider("Rotate").focus();
+    vi.runOnlyPendingTimers();
+    expect(document.activeElement).toBe(slider("Rotate"));
+    expect(slider("Rotate").value).toBe("45");
+  });
+
+  it("keeps code optional and omits the disclosure for PNG", () => {
+    expect((byId("code-details") as HTMLDetailsElement).open).toBe(false);
+    expect(exportCode()).toContain("MaterialShapes");
+    openTab("png");
+    expect(byId("code-details").hidden).toBe(true);
+    openTab("svg");
+    expect(byId("code-details").hidden).toBe(false);
+  });
   it("offers the 35 Material shapes as named buttons, and picking one selects and names it", () => {
     const thumbs = () => Array.from(document.querySelectorAll("#picker .thumb"));
     expect(thumbs().map((t) => [t.tagName, t.getAttribute("aria-label")])).toEqual(CATALOGUE_NAMES.map((n) => ["BUTTON", displayName(n)]));
@@ -99,7 +308,7 @@ describe("the studio page", () => {
       expect(byId("shape-name").textContent).toBe(displayName(name));
     }
     click(document.querySelector('[data-name="Heart"]')!);
-    expect(labels("#controls label")).toEqual(["Roundness", "Rotate"]);
+    expect(labels("#controls label")).toEqual(["Roundness", "Rotate", "Softness", "Roundness of the selected dot"]);
   });
 
   it("names a tab icon that the site ships", () => {
@@ -188,12 +397,12 @@ describe("the studio page", () => {
     expect(inUse()).not.toBe(pathOf("Heart"));
   });
 
-  it("keeps More options for shapes that have them", () => {
-    expect(byId("more").hidden).toBe(false);
-    expect(labels("#more-controls label")).toEqual(["Softness", "Roundness of the selected dot"]);
-    expect(labels("#more-controls button")).toEqual(["Add a dot", "Remove the selected dot"]);
+  it("shows all relevant properties together without More options", () => {
+    expect(byId("more")).toBeNull();
+    expect(labels("#controls label")).toEqual(["Repeats", "Roundness", "Rotate", "Softness", "Roundness of the selected dot"]);
+    expect(labels("#dot-actions button")).toEqual(["Add a dot", "Remove the selected dot"]);
     click(document.querySelector('[data-name="Circle"]')!);
-    expect(byId("more").hidden).toBe(true);
+    expect(labels("#controls label")).toEqual(["Squash"]);
   });
 });
 
@@ -300,7 +509,7 @@ describe("the keyboard", () => {
 
   it("moves focus to the next usable button when the pressed one turns itself off", () => {
     click(document.querySelector('[data-name="Diamond"]')!);
-    const remove = () => Array.from(document.querySelectorAll<HTMLButtonElement>("#more-controls button")).find((b) => b.textContent === "Remove the selected dot")!;
+    const remove = () => Array.from(document.querySelectorAll<HTMLButtonElement>("#dot-actions button")).find((b) => b.textContent === "Remove the selected dot")!;
     remove().focus();
     click(remove());
     expect(remove().disabled).toBe(true);
@@ -308,7 +517,7 @@ describe("the keyboard", () => {
   });
 
   it("keeps focus on a button that changes the shape", () => {
-    const add = Array.from(document.querySelectorAll<HTMLButtonElement>("#more-controls button")).find((b) => b.textContent === "Add a dot")!;
+    const add = Array.from(document.querySelectorAll<HTMLButtonElement>("#dot-actions button")).find((b) => b.textContent === "Add a dot")!;
     add.focus();
     click(add);
     expect(document.activeElement?.textContent).toBe("Add a dot");
@@ -337,6 +546,12 @@ describe("the keyboard", () => {
 });
 
 describe("dragging a dot", () => {
+  it("selects a dot through its larger pointer target", () => {
+    document.querySelectorAll(".dot-target")[1].dispatchEvent(new Event("pointerdown"));
+    byId("preview").dispatchEvent(new Event("pointerup"));
+    expect(dots()[1].classList.contains("selected")).toBe(true);
+    expect(undoButton().disabled).toBe(true);
+  });
   it("adds no undo step for a press that moves nothing", () => {
     dots()[1].dispatchEvent(new Event("pointerdown"));
     byId("preview").dispatchEvent(new Event("pointerup"));
