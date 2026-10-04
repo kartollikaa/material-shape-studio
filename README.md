@@ -26,6 +26,19 @@ Values use the controls' displayed units; custom dot geometry is included as JSO
 No account or server is needed. An invalid link opens the default shape with a
 dismissible notice.
 
+Shared `#doc=` links reopen the complete shape document in the editor, including shapes outside the
+catalogue. An imported shape can be adjusted and reset to its imported version. While you edit it, the
+address keeps the link you opened, so reopening it restores the imported shape; picking a Material
+shape switches back to named parameters. **Copy shape document** copies the current JSON, which is
+how edits to an imported shape travel back to an agent or developer. A malformed link opens the
+default shape with the same dismissible notice.
+
+The [Connect an agent](https://kartollikaa.github.io/material-shape-studio/connect/) page will explain the
+free local CLI, agent plugin, and optional stdio MCP after the package is published. Until then it shows
+an honest unavailable state. The CLI and MCP expose listing, creation, PNG comparison previews, and
+Compose/SVG/CSS export; see [docs/mcp.md](docs/mcp.md). A remote HTTP prototype exists but is not the
+selected release path.
+
 Under it, the engine runs Google's `graphics-shapes` in the browser, so what you see is what
 Compose draws. Read in this order:
 
@@ -52,7 +65,7 @@ module with TypeScript declarations into `packages/engine/dist`.
 npm ci
 ```
 
-Installs the npm workspaces: `packages/engine` and `web`.
+Installs the npm workspaces: `packages/engine`, `packages/core`, `web`, and `server`.
 
 ```bash
 npm test
@@ -65,8 +78,10 @@ run until `./gradlew build` has packaged the engine.
 npm run build
 ```
 
-Builds the static site into `web/dist`. The web workspace depends on the engine package, so this also
-needs `./gradlew build` first. Asset URLs are relative, so the site can be served from any path.
+Builds the static site into `web/dist` and the local CLI/MCP into `server/dist`. Both depend on the
+engine package, so this also needs `./gradlew build` first. Site asset URLs are relative, so it can
+be served from any path. `npm run test:e2e -w web` checks the built site in Chrome at root and
+repository subpaths.
 
 ```bash
 npm run dev -w web
@@ -78,8 +93,12 @@ Starts the studio on a local development server.
 npm run catalogue -w web
 ```
 
-Regenerates `web/src/catalogue/catalogue.json` from Compose's `MaterialShapes.kt` at the pinned
+Regenerates `packages/core/src/catalogue/catalogue.json` from Compose's `MaterialShapes.kt` at the pinned
 androidx commit in `web/scripts/generate-catalogue.mjs`. Change the commit there to follow upstream.
+
+## The shared package
+
+`@material-shape-studio/core` owns the versioned shape document, generated catalogue, pure Compose/SVG/CSS exporters, and the browser-compatible share-link codec. The Studio imports them through this package. The codec carries a complete document and presentation fields in a compressed `#doc=` fragment. It bounds the compressed and decompressed payload before parsing. Engine validation still decides whether a shape's geometry is valid.
 
 ## The engine package
 

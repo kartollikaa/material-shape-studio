@@ -1,0 +1,12 @@
+{
+  "name": "material-shape-studio",
+  "owner": { "name": "Material Shape Studio" },
+  "description": "Material 3 Expressive shape tools for coding agents",
+  "plugins": [
+    {
+      "name": "material-shape-studio",
+      "source": "./",
+      "description": "Create and preview Material shapes with a local CLI"
+    }
+  ]
+}

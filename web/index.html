@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <meta name="description" content="Pick, adjust and export the shapes of Material 3 Expressive." />
+    <link rel="alternate" type="text/plain" href="./connect/agent.txt" title="Agent connection instructions" />
     <title>Material Shape Studio</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
@@ -14,6 +15,7 @@
         <h1>Material Shape Studio</h1>
       </div>
       <span class="spacer"></span>
+      <a href="./connect/">Connect an agent</a>
       <div class="history" aria-label="Edit history">
         <button id="undo" title="Undo (Ctrl+Z)">Undo</button>
         <button id="redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
@@ -37,6 +39,7 @@
           <svg class="preview" id="preview" role="group" aria-label="Shape preview"></svg>
           <p class="hint" id="stage-hint">Dots define the construction pattern, before rounding. Drag a dot or use arrow keys; the pattern repeats around the centre.</p>
           <p class="error" id="error" role="status" hidden></p>
+          <p class="hint" id="bounds-warning" hidden>This shape extends outside the unit square. Compose may scale it differently in a component.</p>
         </div>
         <div class="in-use" id="in-use" aria-label="Shape in use"></div>
       </section>
@@ -58,6 +61,7 @@
         </div>
         <p class="about" id="export-about"></p>
         <div class="buttons" id="export-buttons"></div>
+        <button id="copy-document">Copy shape document</button>
         <details id="code-details"><summary>Show code</summary><pre id="export-code" aria-label="Exported code"></pre></details>
       </section>
     </main>

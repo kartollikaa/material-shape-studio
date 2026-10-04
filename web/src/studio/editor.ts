@@ -4,8 +4,9 @@ import type { Point, Rounding, Shape, ShapeDocument, Transform } from "../docume
 export type Radii = { rounding?: Rounding; innerRounding?: Rounding; perVertexRounding?: Rounding[] };
 
 export type EditorState = {
-  name: string;
+  name: string | null;
   doc: ShapeDocument;
+  initial: ShapeDocument;
   base: Radii;
   roundness: number;
   selected: number;
@@ -34,20 +35,33 @@ const radiiOf = (shape: Shape): Radii => ("rounding" in shape || "perVertexRound
 const cornersOf = (radii: Radii): Rounding[] =>
   [radii.rounding, radii.innerRounding, ...(radii.perVertexRounding ?? [])].filter((r): r is Rounding => !!r);
 
-export function pick(name: string): EditorState {
-  const doc = structuredClone(CATALOGUE[name]);
+function fromBaseline(source: ShapeDocument, name: string | null): EditorState {
+  const doc = structuredClone(source);
   const r = radiiOf(doc.shape);
   const base = structuredClone({ rounding: r.rounding, innerRounding: r.innerRounding, perVertexRounding: r.perVertexRounding });
+  if (!cornersOf(base).length && ["polygon", "ngon", "star", "rectangle"].includes(doc.shape.kind)) {
+    base.rounding = { radius: SHARP_SHAPE_RADIUS };
+  }
   const corners = cornersOf(base);
-  const sharp = corners.length > 0 && corners.every((c) => !c.radius);
+  const sharp = !r.rounding && !r.innerRounding && !r.perVertexRounding || corners.length > 0 && corners.every((c) => !c.radius);
   if (sharp) corners.forEach((c) => { c.radius = SHARP_SHAPE_RADIUS; });
-  return { name, doc, base, roundness: sharp ? 0 : 1, selected: 0 };
+  return { name, doc, initial: structuredClone(source), base, roundness: sharp ? 0 : 1, selected: 0 };
 }
 
-export const isEdited = (s: EditorState) => JSON.stringify(s.doc) !== JSON.stringify(CATALOGUE[s.name]);
+export function pick(name: string): EditorState {
+  const source = CATALOGUE[name];
+  if (!source) throw new Error(`Unknown catalogue shape: ${name}`);
+  return fromBaseline(source, name);
+}
+
+export function fromDocument(doc: ShapeDocument): EditorState {
+  return fromBaseline(doc, null);
+}
+
+export const isEdited = (s: EditorState) => JSON.stringify(s.doc) !== JSON.stringify(s.initial);
 
 export function applyRoundness(s: EditorState) {
-  const shape = radiiOf(s.doc.shape);
+  const shape = s.doc.shape as Radii;
   for (const key of ["rounding", "innerRounding"] as const) {
     const base = s.base[key];
     if (base) shape[key] = { ...shape[key], radius: round3(base.radius * s.roundness) };
@@ -100,7 +114,7 @@ export function mainControls(s: EditorState): Control[] {
     set: (v) => { s.roundness = v; applyRoundness(s); },
   };
   if (shape.kind === "polygon") {
-    const original = CATALOGUE[s.name].shape;
+    const original = s.initial.shape;
     if (original.kind === "polygon" && (original.repeat?.count ?? 1) > 1 && shape.repeat) {
       const repeat = shape.repeat;
       list.push({

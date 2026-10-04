@@ -1,7 +1,8 @@
 import { build } from "@material-shape-studio/engine";
+import { decodeShare } from "@material-shape-studio/core";
 import { CATALOGUE } from "../catalogue";
 import type { Rounding } from "../document";
-import { mainControls, moreControls, pick, round3, type EditorState, type Radii } from "./editor";
+import { fromDocument, mainControls, moreControls, pick, round3, type EditorState, type Radii } from "./editor";
 
 export type SharedState = { v: 1; editor: EditorState; colour: string; tab: "compose" | "svg" | "png" | "css" };
 
@@ -42,6 +43,7 @@ function readParams(params: URLSearchParams): SharedState {
 
 export function encodeState(state: SharedState): string {
   const editor = state.editor;
+  if (editor.name === null) throw invalid();
   const params = new URLSearchParams({ shape: editor.name });
   const original = new Map(controlsOf(pick(editor.name)).map((c) => [c.label, c.get()]));
   for (const control of controlsOf(editor)) {
@@ -66,7 +68,7 @@ export function encodeState(state: SharedState): string {
 
 function validate(value: SharedState): SharedState {
   const editor = value?.editor;
-  const original = editor && Object.hasOwn(CATALOGUE, editor.name) ? CATALOGUE[editor.name] : undefined;
+  const original = editor?.name != null && Object.hasOwn(CATALOGUE, editor.name) ? CATALOGUE[editor.name] : undefined;
   if (value?.v !== 1 || !original || !/^#[0-9a-f]{6}$/i.test(value.colour) ||
       !["compose", "svg", "png", "css"].includes(value.tab) ||
       editor.doc?.v !== 1 || editor.doc.shape?.kind !== original.shape.kind ||
@@ -106,46 +108,80 @@ export function decodeState(payload: string): SharedState {
   return validate(readParams(new URLSearchParams(payload)));
 }
 
+type ShapeLink = { fragment: string; initial: string };
+
+async function decodeShapeLink(fragment: string, current: SharedState): Promise<SharedState> {
+  const { document, presentation } = await decodeShare(fragment);
+  build(JSON.stringify(document));
+  return { ...current, editor: fromDocument(document), colour: presentation.colour };
+}
+
 export function syncAddress(view: Window, initial: SharedState, apply: (state: SharedState) => void, notice: (message: string) => void) {
   let disposed = false;
+  let revision = 0;
+  let latest = initial;
+  let link: ShapeLink | undefined;
   const defaults = JSON.stringify(initial);
   let previous = defaults;
+  const write = (payload: string) => {
+    const url = new URL(view.location.href);
+    url.hash = payload;
+    view.history.replaceState(view.history.state, "", url);
+  };
+  const show = (state: SharedState) => {
+    previous = JSON.stringify(state);
+    latest = state;
+    apply(state);
+  };
+  const restoreDefaults = () => {
+    link = undefined;
+    show(JSON.parse(defaults));
+    notice("This link could not be opened. The default shape is shown.");
+  };
   const load = () => {
     if (disposed) return;
-    if (!view.location.hash) {
-      previous = defaults;
-      apply(JSON.parse(defaults));
+    const current = ++revision;
+    const hash = view.location.hash;
+    if (!hash) {
+      link = undefined;
+      show(JSON.parse(defaults));
+      return;
+    }
+    if (hash.startsWith("#doc=")) {
+      const editorAtStart = JSON.stringify(latest.editor);
+      decodeShapeLink(hash, latest).then((state) => {
+        if (disposed || current !== revision || JSON.stringify(latest.editor) !== editorAtStart) return;
+        link = { fragment: hash, initial: JSON.stringify(state.editor.initial) };
+        show({ ...state, tab: latest.tab });
+        if (view.location.hash !== hash) write(hash);
+      }).catch(() => { if (!disposed && current === revision) restoreDefaults(); });
       return;
     }
     try {
-      const state = decodeState(view.location.hash.slice(1));
-      previous = JSON.stringify(state);
-      apply(state);
+      link = undefined;
+      show(decodeState(hash.slice(1)));
     } catch {
-      if (!disposed) {
-        previous = defaults;
-        apply(JSON.parse(defaults));
-        notice("This link could not be opened. The default shape is shown.");
-      }
+      if (!disposed) restoreDefaults();
     }
   };
   load();
   view.addEventListener("hashchange", load);
   return {
     update(state: SharedState) {
+      latest = state;
       const json = JSON.stringify(state);
       if (json === previous || disposed) return;
       previous = json;
       try {
-        const payload = encodeState(state);
-        const url = new URL(view.location.href);
-        url.hash = payload;
-        view.history.replaceState(view.history.state, "", url);
+        let payload: string;
+        if (state.editor.name !== null) payload = encodeState(state);
+        else if (link && link.initial === JSON.stringify(state.editor.initial)) payload = link.fragment;
+        else return;
+        write(payload);
       } catch {
-        if (!disposed) {
-          previous = "";
-          notice("The address could not be updated. Your edits are still available here.");
-        }
+        if (disposed) return;
+        previous = "";
+        notice("The address could not be updated. Your edits are still available here.");
       }
     },
     dispose() { disposed = true; view.removeEventListener("hashchange", load); },

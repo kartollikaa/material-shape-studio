@@ -3,6 +3,8 @@
 What the app does and how its parts fit. The reasoning behind the architecture is in
 [research/feasibility.md](./research/feasibility.md); the delivery order is in
 [decomposition.md](./decomposition.md). Everything here is for v1 unless marked later.
+The remote agent extension is specified separately in [mcp-spec.md](./mcp-spec.md) and implemented
+as the service described in [mcp.md](./mcp.md).
 
 ## 1. Purpose and scope
 
@@ -19,7 +21,7 @@ A static web app for designers and developers working with Material 3 Expressive
 5. **Export** the shape as code for platforms with a port of `androidx.graphics.shapes`, and as SVG,
    PNG and CSS for those without; share it as a URL that carries the whole document.
 
-Out of scope: raster tracing, component or theme building, accounts, telemetry, any server.
+Out of scope: raster tracing, component or theme building, accounts, telemetry, and hosted services. The optional local agent CLI and stdio MCP are specified in [the agent integration spec](mcp-spec.md).
 The studio shows the shape in use on a photo, an icon button and an avatar. Recorded as a later
 idea, not v1: a FAB and a loading indicator that morphs to a circle.
 The project is independent of Google; "Material Design" is Google's trademark and the site says so.
@@ -39,16 +41,23 @@ engine/                 Gradle, Kotlin Multiplatform: jvm() + js()
   fixtures/             committed golden cubics, one JSON per document
 packages/engine/        npm package @material-shape-studio/engine; dist/ is copied from the
                         Kotlin/JS build (ES module + .d.mts), never committed
+packages/core/          shared shape documents, generated catalogue, pure exporters, and share codec
 web/                    Vite + TypeScript, no UI framework; workspace member depending on the package above
   scripts/              generate-catalogue.mjs: the 35 MaterialShapes from Compose's source
-  src/document.ts       the shape document types
-  src/catalogue/        the generated catalogue data
-  src/export/           one module per target, pure functions from a document or its cubics to text
+  src/document.ts       compatibility re-export of shared shape document types
+  src/catalogue/        compatibility re-export of the shared catalogue data
+  src/export/           compatibility re-exports and the Kotlin round-trip test
   src/studio/           editor state and controls (editor.ts), dot geometry, and the page (page.ts)
 .github/workflows       ci.yml (every PR), deploy.yml (main -> GitHub Pages)
 ```
 
 `npm install` works without a Gradle build because the package exists before its `dist/` is built.
+
+An external `#doc=` fragment is decoded with bounded decompression, then validated by the engine
+before it replaces the current editor document. Imported documents have no catalogue identity and
+retain their own reset baseline. The user can copy the current JSON after editing and return it to
+an agent. An invalid `#doc=` link opens the default shape with the same dismissible notice as any
+other undecodable hash; shapes outside the unit square show a warning near the preview.
 Testing or running anything that imports the engine needs `./gradlew build` first, which runs the
 engine's tests and syncs the whole-program ES module and its `.d.mts` into `dist/`; `npm test` refuses
 to run without it. CI does both. `wasmJs` is a later optional target of the same module, not part of v1.
@@ -145,6 +154,12 @@ The address updates synchronously during edits, including undo, redo and reset, 
 state; no share button is needed. Opening or editing the hash restores the editor. Removing the
 hash restores the default shape, colour and export tab, and clears any link notice. The parameters
 can optionally declare `v=1`; other versions are rejected.
+
+A shape without a catalogue origin, such as a document from an agent, has no named parameters. Its
+address is the `#doc=` link it was opened from, unchanged while the shape is edited, so the link keeps
+the agent's presentation and reopening it restores the imported reset baseline; edits leave through
+**Copy shape document**. Opening a link decodes it asynchronously: a shape edit made before decoding
+finishes wins, while a tab or colour change keeps the link and the chosen tab.
 
 A hash the codec cannot decode opens the default shape with a dismissible notice, never a blank
 page. Decoding bounds the address length, rejects unknown or duplicate parameters, validates control
@@ -243,7 +258,7 @@ continues to the next input instead of losing focus when its previous input is r
 
 ## 7. Exporters
 
-Exporters are pure functions in `web/src/export/`, one module per target, taking a document or its
+Exporters are pure functions in `packages/core/src/export/`, one module per target, taking a document or its
 normalized cubics and returning text:
 
 | Target | Emits |

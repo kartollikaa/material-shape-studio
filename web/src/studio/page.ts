@@ -1,11 +1,12 @@
 import { build, buildCubics, version } from "@material-shape-studio/engine";
+import { previewFrame } from "@material-shape-studio/core";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
 import type { ShapeDocument, Transform } from "../document";
 import { cssRule } from "../export/css";
 import { kotlinFile } from "../export/kotlin";
 import { svgFile, svgPath } from "../export/svg";
 import {
-  addDot, canRemoveDot, History, isEdited, mainControls, moreControls, moveDot, pick, removeDot, restore, round3, snapshot,
+  addDot, canRemoveDot, fromDocument, History, isEdited, mainControls, moreControls, moveDot, pick, removeDot, restore, round3, snapshot,
   viewTransforms, type Control, type EditorState,
 } from "./editor";
 import { backward, forward, squareAround, type Box } from "./geometry";
@@ -84,12 +85,12 @@ export function mountStudio(page: Document) {
           }
         });
         b.addEventListener("pointerenter", () => { $("caption").textContent = displayName(name); });
-        b.addEventListener("pointerleave", () => { $("caption").textContent = `Selected: ${displayName(state.name)}`; });
+        b.addEventListener("pointerleave", () => { $("caption").textContent = `Selected: ${displayName(state.name ?? "Custom shape")}`; });
         container.appendChild(b);
       }
     }
     for (const b of Array.from(container.children) as HTMLElement[]) b.setAttribute("aria-pressed", String(b.dataset.name === state.name));
-    $("caption").textContent = `Selected: ${displayName(state.name)}`;
+    $("caption").textContent = `Selected: ${displayName(state.name ?? "Custom shape")}`;
   }
 
   function controlRow(container: HTMLElement, c: Control) {
@@ -151,8 +152,8 @@ export function mountStudio(page: Document) {
   }
 
   function renderControls() {
-    $("shape-name").textContent = displayName(state.name);
-    $("shape-status").textContent = isEdited(state) ? "Edited shape" : "Material original";
+    $("shape-name").textContent = displayName(state.name ?? "Custom shape");
+    $("shape-status").textContent = isEdited(state) ? "Edited shape" : state.name ? "Material original" : "Custom shape";
     $("reset").hidden = !isEdited(state);
     const main = $("controls");
     const controls = [...mainControls(state), ...moreControls(state)];
@@ -258,10 +259,12 @@ export function mountStudio(page: Document) {
     row.replaceChildren();
     if (!cubics) return;
     const d = pathOf(cubics);
+    const [x, y, size] = previewFrame(buildDoc(state.doc).bounds);
+    const artwork = { transform: `translate(${x} ${y}) scale(${size})` };
     row.appendChild(html("span", { className: "label", textContent: "In use:" }));
     const figure = (caption: string, draw: (canvas: Element) => void) => {
       const fig = html("figure");
-      draw(svg("svg", { viewBox: "0 0 1 1", "aria-hidden": "true" }, fig));
+      draw(svg("svg", { viewBox: `${x} ${y} ${size} ${size}`, "aria-hidden": "true" }, fig));
       fig.appendChild(html("figcaption", { textContent: caption }));
       row.appendChild(fig);
     };
@@ -272,27 +275,28 @@ export function mountStudio(page: Document) {
       svg("stop", { offset: 0, "stop-color": "#8ec5ff" }, sky);
       svg("stop", { offset: 1, "stop-color": "#fbd3e9" }, sky);
       const g = svg("g", { "clip-path": "url(#clip-photo)" }, canvas);
-      svg("rect", { x: 0, y: 0, width: 1, height: 1, fill: "url(#sky)" }, g);
-      svg("circle", { cx: 0.7, cy: 0.32, r: 0.12, fill: "#fff3b0" }, g);
-      svg("path", { d: "M0 0.8 L0.3 0.45 L0.52 0.68 L0.7 0.5 L1 0.82 L1 1 L0 1Z", fill: "#3f6e5a" }, g);
+      const scene = svg("g", artwork, g);
+      svg("rect", { x: 0, y: 0, width: 1, height: 1, fill: "url(#sky)" }, scene);
+      svg("circle", { cx: 0.7, cy: 0.32, r: 0.12, fill: "#fff3b0" }, scene);
+      svg("path", { d: "M0 0.8 L0.3 0.45 L0.52 0.68 L0.7 0.5 L1 0.82 L1 1 L0 1Z", fill: "#3f6e5a" }, scene);
     });
     figure("Icon button", (canvas) => {
       svg("path", { d, fill: colour }, canvas);
-      svg("path", { d: "M0.5 0.34 V0.66 M0.34 0.5 H0.66", stroke: "#ffffff", "stroke-width": 0.07, "stroke-linecap": "round" }, canvas);
+      svg("path", { d: "M0.5 0.34 V0.66 M0.34 0.5 H0.66", stroke: "#ffffff", "stroke-width": 0.07, "stroke-linecap": "round" }, svg("g", artwork, canvas));
     });
     figure("Avatar", (canvas) => {
       svg("path", { d, style: "fill: var(--soft)" }, canvas);
       const text = svg("text", {
         x: 0.5, y: 0.5, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 0.32, "font-weight": 600,
         style: "fill: var(--text)", "font-family": "system-ui, sans-serif",
-      }, canvas);
+      }, svg("g", artwork, canvas));
       text.textContent = "AB";
     });
   }
 
   const EXPORTS: Record<Tab, { about: () => string; code: (cubics: ArrayLike<number>) => string; buttons: [string, "copy" | "svg" | "png"][] }> = {
     compose: {
-      about: () => (isEdited(state)
+      about: () => (isEdited(state) || !state.name
         ? "Your edited shape as code. Paste it into a Kotlin file of an app that uses Compose Material 3 and androidx.graphics:graphics-shapes."
         : `This is Material's own MaterialShapes.${state.name}. Paste the code into a Kotlin file of an app that uses Compose Material 3.`),
       code: () => kotlinFile(state.doc, { catalogueName: isEdited(state) ? null : state.name, colour }),
@@ -315,7 +319,7 @@ export function mountStudio(page: Document) {
     },
   };
 
-  const fileName = () => `${displayName(state.name).toLowerCase().replace(/\s+/g, "-")}${isEdited(state) ? "-edited" : ""}`;
+  const fileName = () => `${displayName(state.name ?? "Custom shape").toLowerCase().replace(/\s+/g, "-")}${isEdited(state) ? "-edited" : ""}`;
   function download(blob: Blob, extension: string) {
     const a = html("a", { href: URL.createObjectURL(blob), download: `${fileName()}.${extension}` });
     a.click();
@@ -382,6 +386,12 @@ export function mountStudio(page: Document) {
     const cubics = normalizedCubics();
     renderInUse(cubics);
     renderExport(cubics);
+    try {
+      const bounds = buildDoc(state.doc).bounds;
+      $("bounds-warning").hidden = bounds.every((v, i) => i < 2 ? v >= -1e-4 : v <= 1 + 1e-4);
+    } catch {
+      $("bounds-warning").hidden = true;
+    }
     ($("undo") as HTMLButtonElement).disabled = !history.canUndo;
     ($("redo") as HTMLButtonElement).disabled = !history.canRedo;
     if (view && scroll && (view.scrollX !== scroll[0] || view.scrollY !== scroll[1])) view.scrollTo(scroll[0], scroll[1]);
@@ -404,7 +414,20 @@ export function mountStudio(page: Document) {
     button.setAttribute("aria-expanded", String(button.getAttribute("aria-expanded") !== "true"));
   });
   $("redo").addEventListener("click", redo);
-  $("reset").addEventListener("click", () => { remember(); state = pick(state.name); lastGood = null; render(); });
+  $("reset").addEventListener("click", () => {
+    remember();
+    state = state.name ? pick(state.name) : fromDocument(state.initial);
+    lastGood = null;
+    render();
+  });
+  $("copy-document").addEventListener("click", () => {
+    const button = $("copy-document");
+    if (!navigator.clipboard) { button.textContent = "Copy failed"; return; }
+    navigator.clipboard.writeText(JSON.stringify(state.doc)).then(
+      () => { button.textContent = "Copied document"; },
+      () => { button.textContent = "Copy failed"; },
+    );
+  });
   $("colour").addEventListener("input", (e) => { colour = (e.target as HTMLInputElement).value; renderLive(); });
   $("tabs").addEventListener("click", (e) => {
     const chosen = (e.target as HTMLElement).dataset?.tab as Tab | undefined;

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "material-shape-studio",
+  "version": "0.1.0",
+  "description": "Create and preview Material shapes with a local CLI",
+  "author": { "name": "Material Shape Studio" },
+  "homepage": "https://kartollikaa.github.io/material-shape-studio/",
+  "repository": "https://github.com/kartollikaa/material-shape-studio",
+  "license": "Apache-2.0",
+  "keywords": ["material", "shapes", "compose", "design"]
+}

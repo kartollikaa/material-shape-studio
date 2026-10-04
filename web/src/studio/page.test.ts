@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { build, buildCubics } from "@material-shape-studio/engine";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
+import { encodeShare, previewFrame } from "@material-shape-studio/core";
 import { svgPath } from "../export/svg";
 import { displayName, mountStudio } from "./page";
 import { decodeState } from "./url-state";
@@ -183,15 +184,88 @@ describe("the browser address", () => {
     expect(document.querySelector("[data-url-notice]")).toBeNull();
     expect(window.location.hash).toBe("");
   });
+
+  it("keeps a linked custom shape's imported link, with its presentation and reset baseline", async () => {
+    const link = await encodeShare({
+      document: { v: 1, shape: { kind: "ngon", vertices: 7 } },
+      presentation: { colour: "#123456", theme: "dark", context: "avatar" },
+    });
+    dispose();
+    document.body.innerHTML = body;
+    window.history.replaceState(null, "", link);
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Custom shape"));
+    expect((byId("colour") as HTMLInputElement).value).toBe("#123456");
+    slide("Sides", 9);
+    openTab("svg");
+    expect(window.location.hash).toBe(link);
+    click(document.querySelector('[data-name="Heart"]')!);
+    expect(window.location.hash).toContain("shape=Heart");
+    click(byId("undo"));
+    expect(slider("Sides").value).toBe("9");
+    expect(window.location.hash).toBe(link);
+    const address = window.location.href;
+    dispose();
+    document.body.innerHTML = body;
+    window.history.replaceState(null, "", address);
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(slider("Sides").value).toBe("7"));
+    slide("Sides", 9);
+    click(byId("reset"));
+    expect(slider("Sides").value).toBe("7");
+  });
+
+  it("keeps a decoding link through a tab change but lets a shape edit win", async () => {
+    const link = await encodeShare({
+      document: { v: 1, shape: { kind: "ngon", vertices: 7 } },
+      presentation: { colour: "#6750a4", theme: "light", context: "button" },
+    });
+    window.history.replaceState(null, "", link);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    openTab("svg");
+    await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Custom shape"));
+    expect(document.querySelector('[data-tab="svg"]')!.getAttribute("aria-selected")).toBe("true");
+    expect(window.location.hash).toBe(link);
+    click(document.querySelector('[data-name="Heart"]')!);
+    window.history.replaceState(null, "", link);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    slide("Rotate", 30);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(byId("shape-name").textContent).toBe("Heart");
+    expect(window.location.hash).toContain("rotate=30");
+  });
 });
 afterEach(() => {
   dispose();
+  window.history.replaceState(null, "", window.location.pathname);
   vi.useRealTimers();
   vi.restoreAllMocks();
   Reflect.deleteProperty(navigator, "clipboard");
 });
 
 describe("the studio page", () => {
+  it("opens an agent-created custom shape and copies the edited document", async () => {
+    const doc = { v: 1 as const, shape: { kind: "ngon" as const, vertices: 7 } };
+    dispose();
+    document.body.innerHTML = body;
+    window.location.hash = await encodeShare({
+      document: doc,
+      presentation: { colour: "#6750a4", theme: "light", context: "button" },
+    });
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Custom shape"));
+    expect(document.querySelectorAll("#preview path")).toHaveLength(1);
+    const bounds = JSON.parse(build(JSON.stringify(doc))).bounds as [number, number, number, number];
+    expect(document.querySelector("#in-use svg")!.getAttribute("viewBox")).toBe(previewFrame(bounds).join(" "));
+    slide("Sides", 8);
+    expect(byId("shape-status").textContent).toBe("Edited shape");
+    const writeText = vi.fn(async (_value: string) => undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    click(byId("copy-document"));
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    expect(JSON.parse(writeText.mock.calls[0][0])).toEqual({ v: 1, shape: { kind: "ngon", vertices: 8 } });
+  });
+
   it("starts with editable dots and point-specific controls without a mode toggle", () => {
     expect(byId("edit-points")).toBeNull();
     expect(dots()).toHaveLength(2);
