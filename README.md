@@ -26,6 +26,13 @@ Values use the controls' displayed units; custom dot geometry is included as JSO
 No account or server is needed. An invalid link opens the default shape with a
 dismissible notice.
 
+The live site counts page views and a few actions, such as picking a shape, exporting it, and
+copying an install command on the Connect page, with Google Analytics through Firebase. It never
+sends the shape or the address hash. Development servers, tests and automated browsers send
+nothing. The events are listed in [docs/spec.md §10](docs/spec.md#10-usage-analytics), and the
+data is under Analytics in the Firebase console of project `material-shape-studio`. A fork should
+build without it: `VITE_ANALYTICS=off npm run build -w web`.
+
 A shape from outside the catalogue, such as one an agent made, carries its whole document in a
 `document` parameter instead of `shape`, and its edits follow as the same named parameters. It can be
 adjusted and reset to its imported version, and the agent CLI links use exactly this address.

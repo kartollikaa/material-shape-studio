@@ -241,3 +241,5 @@ simpler one, which S3b ships.
 - 2026-09-29: S3c's review fixes (keyboard focus, failure paths, tests for both) took it just past
   the line cap. It stays one pull request: splitting after review would send the same page back
   for review in two halves.
+- 2026-10-05: the owner asked for usage analytics. Telemetry leaves spec §1's out-of-scope list and
+  spec §10 describes the events; one `feature/studio-analytics` pull request ships it.
