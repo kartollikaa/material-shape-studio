@@ -21,7 +21,7 @@ A static web app for designers and developers working with Material 3 Expressive
 5. **Export** the shape as code for platforms with a port of `androidx.graphics.shapes`, and as SVG,
    PNG and CSS for those without; share it as a URL that carries the whole document.
 
-Out of scope: raster tracing, component or theme building, accounts, telemetry, and hosted services. The optional local agent CLI and stdio MCP are specified in [the agent integration spec](mcp-spec.md).
+Out of scope: raster tracing, component or theme building, accounts, and hosted services. The site counts its use with Google Analytics as §10 describes. The optional local agent CLI and stdio MCP are specified in [the agent integration spec](mcp-spec.md).
 The studio shows the shape in use on a photo, an icon button and an avatar. Recorded as a later
 idea, not v1: a FAB and a loading indicator that morphs to a circle.
 The project is independent of Google; "Material Design" is Google's trademark and the site says so.
@@ -49,6 +49,8 @@ web/                    Vite + TypeScript, no UI framework; workspace member dep
   src/catalogue/        compatibility re-export of the shared catalogue data
   src/export/           compatibility re-exports and the Kotlin round-trip test
   src/studio/           the page (page.ts) and its address synchronisation (address-sync.ts)
+  src/connect-page.ts   the Connect an agent page: copy buttons and host tabs
+  src/analytics.ts      the only module that imports Firebase (§10)
 .github/workflows       ci.yml (every PR), deploy.yml (main -> GitHub Pages)
 ```
 
@@ -315,6 +317,49 @@ within 1e-4 rather than exactly; a compiled check proves that bound for every ca
 produces `web/dist`. `ci.yml` runs all three on every pull request from a clean checkout; `deploy.yml`
 builds on every push to `main` and publishes with `actions/deploy-pages`, packaging the engine with `./gradlew :engine:jsPackage` before building the site. Vite's `base` is `./`:
 the app routes only through the URL hash, so relative asset URLs work under any path, nothing
-depends on the Pages URL, and a custom domain is a Pages setting with no code change. The engine's
+depends on the Pages URL, and a custom domain is a Pages setting with no code change; only the
+analytics key's allowed referrers (§10) must then list the new domain. The engine's
 production size is measured by `npm run size -w packages/engine` and recorded in the README after
 each change that affects it.
+
+## 10. Usage analytics
+
+The published site reports how it is used to Google Analytics 4 through Firebase (project
+`material-shape-studio`, its web app and the GA4 property linked to it). Events are sent only after
+the action succeeded:
+
+| Event | Sent when | Parameters |
+|---|---|---|
+| `page_view` | the studio or the Connect page opens | `page_title`, `page_location` |
+| `select_shape` | a catalogue shape is picked | `shape`: its Compose name |
+| `export_shape` | code is copied or a file downloaded | `format`: `compose`, `svg`, `png` or `css`; `method`: `copy` or `download`; `shape`: the catalogue name or `custom`; `edited` |
+| `copy_shape_document` | **Copy shape document** copied the JSON | none |
+| `connect_open` | the Connect page opens | none |
+| `plugin_install` | an install command or the agent prompt is copied, or **Add to Cursor** is clicked | `host`: `agent`, `claude-code`, `codex`, `cursor` or `cli`; `method`: `copy` or `link` |
+| `plugin_verify` | the check command is copied | none |
+
+`page_location` is the origin and path only. The hash carries the whole shape document, so it is
+never reported, and nor are the document, the code, the colour or any edit. Automatic page views are
+off, so editing, which rewrites the address, adds no page views. Google Analytics sets its own
+first-party cookies.
+
+`web/src/analytics.ts` is the only module that imports Firebase, and only `firebase/app` and
+`firebase/analytics`. The pages receive its typed `track` function, so their tests pass a spy. It
+loads the SDK lazily, and only in a production build, when `isSupported()` holds, when the browser is
+not driven by automation (`navigator.webdriver`, which covers the Playwright checks), and when the
+build was not made with `VITE_ANALYTICS=off`. Anywhere else `track` does nothing. The web config,
+API key included, is public by design and committed. The key is limited to Firebase's APIs and to
+the Pages origin as its referrer. That limits reuse of the key, not the events themselves: hits to
+Google Analytics carry no key, so a production build previewed locally in an ordinary browser does
+report to the live property. Build such a preview with `VITE_ANALYTICS=off`.
+
+Data appears under Analytics in the Firebase console for the project, or in its GA4 property;
+the Realtime report shows events within seconds of a visit. To build the site without analytics,
+for a fork or a mirror, run `VITE_ANALYTICS=off npm run build -w web`. A visitor who blocks Google
+Analytics, with a content blocker or Google's opt-out add-on, sends nothing; the studio works the
+same.
+
+Tests: a unit test of the wrapper (off outside production, `isSupported()` respected, early events
+delivered once and in order, the address without its hash), DOM tests of both pages with a spy for
+every event, and a Playwright check that the built site makes no request to Google Analytics or
+Firebase under automation.

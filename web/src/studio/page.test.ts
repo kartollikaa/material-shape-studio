@@ -2,7 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { deflateRawSync } from "node:zlib";
 import { build, buildCubics } from "@material-shape-studio/engine";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import type { Track } from "../analytics";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
 import { decodeState, previewFrame, studioAddress, type SharedShape } from "@material-shape-studio/core";
 import { svgPath } from "../export/svg";
@@ -620,5 +621,61 @@ describe("dragging a dot", () => {
     byId("preview").dispatchEvent(new Event("pointerup"));
     press("z", { ctrlKey: true });
     expect(byId("reset").hidden).toBe(true);
+  });
+});
+
+describe("analytics", () => {
+  let track: Mock<Track>;
+  beforeEach(() => {
+    dispose();
+    document.body.innerHTML = body;
+    track = vi.fn<Track>();
+    dispose = mountStudio(document, track);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: vi.fn(async () => undefined) } });
+    Object.assign(URL, { createObjectURL: vi.fn(() => "blob:shape"), revokeObjectURL: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  });
+  afterEach(() => vi.unstubAllGlobals());
+  const exports = () => track.mock.calls.filter(([name]) => name === "export_shape").map(([, params]) => params);
+
+  it("reports every successful export with its format and method", async () => {
+    vi.stubGlobal("Path2D", class {});
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ fill: vi.fn() } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation((done) => done(new Blob()));
+    for (const [tab, label] of [["compose", "Copy code"], ["svg", "Copy SVG"], ["svg", "Download SVG"], ["png", "Download PNG"], ["css", "Copy CSS"]]) {
+      openTab(tab);
+      click(Array.from(document.querySelectorAll("#export-buttons button")).find((b) => b.textContent === label)!);
+    }
+    await vi.waitFor(() => expect(exports()).toHaveLength(5));
+    const shape = { shape: "Cookie4Sided", edited: false };
+    expect(exports()).toEqual(expect.arrayContaining([
+      { format: "compose", method: "copy", ...shape },
+      { format: "svg", method: "copy", ...shape },
+      { format: "svg", method: "download", ...shape },
+      { format: "png", method: "download", ...shape },
+      { format: "css", method: "copy", ...shape },
+    ]));
+  });
+
+  it("reports an edited shape as edited", async () => {
+    slide("Rotate", 30);
+    click(firstExportButton());
+    await vi.waitFor(() => expect(exports()).toEqual([{ format: "compose", method: "copy", shape: "Cookie4Sided", edited: true }]));
+  });
+
+  it("reports nothing when the copy fails", async () => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: vi.fn(async () => { throw new Error("denied"); }) } });
+    click(firstExportButton());
+    await vi.waitFor(() => expect(firstExportButton().textContent).toBe("Copy failed"));
+    Reflect.deleteProperty(navigator, "clipboard");
+    click(firstExportButton());
+    expect(exports()).toEqual([]);
+  });
+
+  it("reports the picked catalogue shape and a copied shape document", async () => {
+    click(document.querySelector('[data-name="Heart"]')!);
+    expect(track).toHaveBeenCalledWith("select_shape", { shape: "Heart" });
+    click(byId("copy-document"));
+    await vi.waitFor(() => expect(track).toHaveBeenCalledWith("copy_shape_document", {}));
   });
 });

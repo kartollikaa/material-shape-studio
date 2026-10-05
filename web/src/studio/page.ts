@@ -3,6 +3,7 @@ import {
   addDot, backward, canRemoveDot, DEFAULT_COLOUR, forward, fromDocument, History, isEdited, mainControls, moreControls, moveDot, pick, previewFrame,
   removeDot, restore, round3, snapshot, squareAround, viewTransforms, type Box, type Control, type EditorState,
 } from "@material-shape-studio/core";
+import type { Track } from "../analytics";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
 import type { ShapeDocument, Transform } from "../document";
 import { cssRule } from "../export/css";
@@ -18,7 +19,7 @@ const PNG_SIZE = 1024;
 
 export const displayName = (name: string) => name.replace(/([a-z])([A-Z0-9])/g, "$1 $2").replace(/([0-9])([A-Z])/g, "$1 $2");
 
-export function mountStudio(page: Document) {
+export function mountStudio(page: Document, track: Track = () => {}) {
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => page.getElementById(id) as T;
   const svg = (tag: string, attrs: Record<string, string | number> = {}, parent?: Element) => {
     const node = page.createElementNS(SVG_NS, tag);
@@ -77,6 +78,7 @@ export function mountStudio(page: Document) {
         svg("path", { d: thumbs[name].d }, svg("svg", { viewBox: thumbs[name].box, "aria-hidden": "true" }, b));
         b.addEventListener("click", () => {
           remember(); state = pick(name); lastGood = null; render();
+          track("select_shape", { shape: name });
           if ($("change-shape").getAttribute("aria-expanded") === "true") {
             $("change-shape").setAttribute("aria-expanded", "false");
             $("change-shape").focus({ preventScroll: true });
@@ -329,18 +331,29 @@ export function mountStudio(page: Document) {
       button.textContent = text;
       setTimeout(() => { button.textContent = label; }, 1400);
     };
+    const exported = { format: tab, shape: state.name ?? "custom", edited: isEdited(state) };
     if (kind === "copy") {
       if (!navigator.clipboard) return flash("Copy failed");
-      navigator.clipboard.writeText(EXPORTS[tab].code(cubics)).then(() => flash("Copied"), () => flash("Copy failed"));
+      navigator.clipboard.writeText(EXPORTS[tab].code(cubics)).then(() => {
+        flash("Copied");
+        track("export_shape", { ...exported, method: "copy" });
+      }, () => flash("Copy failed"));
     }
-    if (kind === "svg") download(new Blob([svgFile(cubics, colour)], { type: "image/svg+xml" }), "svg");
+    if (kind === "svg") {
+      download(new Blob([svgFile(cubics, colour)], { type: "image/svg+xml" }), "svg");
+      track("export_shape", { ...exported, method: "download" });
+    }
     if (kind === "png") {
       const canvas = html("canvas", { width: PNG_SIZE, height: PNG_SIZE });
       const ctx = canvas.getContext("2d");
       if (!ctx) return flash("Download failed");
       ctx.fillStyle = colour;
       ctx.fill(new Path2D(svgPath(cubics, PNG_SIZE, 2)));
-      canvas.toBlob((blob) => (blob ? download(blob, "png") : flash("Download failed")), "image/png");
+      canvas.toBlob((blob) => {
+        if (!blob) return flash("Download failed");
+        download(blob, "png");
+        track("export_shape", { ...exported, method: "download" });
+      }, "image/png");
     }
   }
 
@@ -422,7 +435,7 @@ export function mountStudio(page: Document) {
     const button = $("copy-document");
     if (!navigator.clipboard) { button.textContent = "Copy failed"; return; }
     navigator.clipboard.writeText(JSON.stringify(state.doc)).then(
-      () => { button.textContent = "Copied document"; },
+      () => { button.textContent = "Copied document"; track("copy_shape_document", {}); },
       () => { button.textContent = "Copy failed"; },
     );
   });
