@@ -359,6 +359,13 @@ for a fork or a mirror, run `VITE_ANALYTICS=off npm run build -w web`. A visitor
 Analytics, with a content blocker or Google's opt-out add-on, sends nothing; the studio works the
 same.
 
+Google Analytics shows an event parameter in reports and explorations only once the property has
+it registered as an event-scoped custom dimension, and only for data collected after that.
+`page_title` and `page_location` are built in; every other parameter in the table is registered. A
+new parameter is registered (GA Admin → Custom definitions) before the release that sends it, or its
+first data never appears in reports. Explorations read event-level data, which the property's data
+retention setting limits; standard reports and a BigQuery export are not limited by it.
+
 Tests: a unit test of the wrapper (off outside production, `isSupported()` respected, early events
 delivered once and in order, the address without its hash), DOM tests of both pages with a spy for
 every event, and a Playwright check that the built site makes no request to Google Analytics or
