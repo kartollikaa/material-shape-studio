@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
-import { CATALOGUE, CATALOGUE_NAMES, encodeShare, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
+import { CATALOGUE, CATALOGUE_NAMES, DEFAULT_COLOUR, SHAPE_KINDS, studioAddress, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
 import { documentSchema, previewItemsSchema } from "./schemas";
 import { ShapeJobs } from "./jobs";
 import type { ServiceConfig } from "./config";
@@ -8,29 +8,29 @@ import type { ServiceConfig } from "./config";
 type ToolResult = { content: ({ type: "text"; text: string } | { type: "image"; data: string; mimeType: "image/png" })[]; structuredContent?: Record<string, unknown>; isError?: boolean };
 const textResult = (value: Record<string, unknown>): ToolResult => ({ content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: value });
 const toolError = (error: unknown): ToolResult => ({ content: [{ type: "text", text: (error as Error).message }], isError: true });
-const presentation = (colour: string): SharedShape["presentation"] => ({ colour, theme: "light", context: "button" });
+const presentation = (colour: string): SharedShape["presentation"] => ({ colour: colour.toLowerCase(), theme: "light", context: "button" });
 
 export function registerShapeTools(server: McpServer, jobs: ShapeJobs, config: Pick<ServiceConfig, "studioUrl">) {
-  const studioUrl = (fragment: string) => `${config.studioUrl.replace(/#.*$/, "")}${fragment}`;
+  const studioUrl = (shape: SharedShape) => `${config.studioUrl.replace(/#.*$/, "")}${studioAddress(shape)}`;
 
   server.registerTool("list_shapes", {
     description: "Browse Material's 35 named shapes and the editable document format. Filter names before creating a shape.",
     inputSchema: z.object({ filter: z.string().max(80).optional() }).strict(),
   }, async ({ filter }): Promise<ToolResult> => {
     const names = CATALOGUE_NAMES.filter((name) => !filter || name.toLowerCase().includes(filter.toLowerCase()));
-    return textResult({ shapes: names.map((name) => ({ name, document: CATALOGUE[name] })), vocabulary: ["polygon", "ngon", "circle", "rectangle", "star", "pill", "pillStar", "features"] });
+    return textResult({ shapes: names.map((name) => ({ name, document: CATALOGUE[name] })), vocabulary: SHAPE_KINDS });
   });
 
   server.registerTool("create_shape", {
     description: "Validate a Material catalogue name or a complete editable shape document, and return its bounds and Studio link. Pass the returned document to preview_shapes or export_shape.",
-    inputSchema: z.object({ name: z.string().optional(), document: documentSchema.optional(), colour: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#6750a4") }).strict(),
+    inputSchema: z.object({ name: z.string().optional(), document: documentSchema.optional(), colour: z.string().regex(/^#[0-9a-fA-F]{6}$/).default(DEFAULT_COLOUR) }).strict(),
   }, async ({ name, document, colour }): Promise<ToolResult> => {
     try {
       if (!!name === !!document) throw new Error("provide exactly one of name or document");
       if (name && !Object.hasOwn(CATALOGUE, name)) throw new Error(`unknown catalogue name: ${name}`);
       const chosen = name ? CATALOGUE[name] : document as ShapeDocument;
       const created = await jobs.run({ kind: "create", document: chosen }) as Record<string, unknown>;
-      return textResult({ ...created, studioUrl: studioUrl(await encodeShare({ document: chosen, presentation: presentation(colour) })) });
+      return textResult({ ...created, studioUrl: studioUrl({ document: chosen, presentation: presentation(colour) }) });
     } catch (error) { return toolError(error); }
   });
 
@@ -39,7 +39,7 @@ export function registerShapeTools(server: McpServer, jobs: ShapeJobs, config: P
     inputSchema: z.object({ shapes: previewItemsSchema }).strict(),
   }, async ({ shapes }): Promise<ToolResult> => {
     try {
-      const links = await Promise.all(shapes.map(async (item) => studioUrl(await encodeShare({ document: item.document as ShapeDocument, presentation: item.presentation }))));
+      const links = shapes.map((item) => studioUrl({ document: item.document as ShapeDocument, presentation: item.presentation }));
       const rendered = await jobs.run({ kind: "preview", shapes: shapes as (SharedShape & { label: string })[] }) as { png: string };
       return { content: [{ type: "text", text: JSON.stringify({ links }) }, { type: "image", data: rendered.png, mimeType: "image/png" }], structuredContent: { links, mediaType: "image/png" } };
     } catch (error) { return toolError(error); }

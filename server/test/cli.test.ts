@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { expect, it } from "vitest";
-import { CATALOGUE, decodeShare } from "@material-shape-studio/core";
+import { CATALOGUE, decodeState } from "@material-shape-studio/core";
 
 const run = promisify(execFile);
 const cli = join(import.meta.dirname, "../dist/cli.mjs");
@@ -16,7 +16,7 @@ it("creates, previews, and exports the same document", async () => {
   await writeFile(documentFile, JSON.stringify(document));
   const created = JSON.parse((await run(process.execPath, [cli, "create", "--document", documentFile])).stdout);
   expect(created.document).toEqual(document);
-  expect(created.studioUrl).toContain("#doc=");
+  expect(new URL(created.studioUrl).hash).toBe(`#${new URLSearchParams({ document: JSON.stringify(document) })}`);
   const input = join(directory, "comparison.json");
   const output = join(directory, "comparison.png");
   await writeFile(input, JSON.stringify([{ document, presentation: { colour: "#6750a4", theme: "light", context: "button" }, label: "Seven sides" }]));
@@ -31,20 +31,35 @@ it("creates, previews, and exports the same document", async () => {
 it("creates a catalogue shape by name and rejects names that are not entries", async () => {
   const created = JSON.parse((await run(process.execPath, [cli, "create", "--name", "Heart"])).stdout);
   expect(created.document).toEqual(CATALOGUE.Heart);
-  expect(created.studioUrl).toContain("#doc=");
+  expect(created.studioUrl).toBe("https://kartollikaa.github.io/material-shape-studio/#shape=Heart");
   for (const name of ["Nonexistent", "constructor", "__proto__"]) {
     await expect(run(process.execPath, [cli, "create", "--name", name])).rejects.toMatchObject({ stderr: `unknown catalogue name: ${name}\n` });
   }
 });
 
-it("links only the shape and presentation of each preview item", async () => {
+it("links each preview item to the address the website writes for its document and colour", async () => {
   const directory = await mkdtemp(join(tmpdir(), "shape-cli-"));
   const input = join(directory, "comparison.json");
   const document = { v: 1, shape: { kind: "ngon", vertices: 5 } };
-  const presentation = { colour: "#6750a4", theme: "dark", context: "avatar" };
-  await writeFile(input, JSON.stringify([{ document, presentation, label: "Five" }]));
+  const presentation = { colour: "#ABCDEF", theme: "dark", context: "avatar" };
+  await writeFile(input, JSON.stringify([{ document, presentation, label: "Five" }, { document: CATALOGUE.Sunny, presentation, label: "Sunny" }]));
   const preview = JSON.parse((await run(process.execPath, [cli, "preview", "--input", input, "--output", join(directory, "out.png")])).stdout);
-  expect(await decodeShare(new URL(preview.links[0]).hash)).toEqual({ document, presentation });
+  const [custom, preset] = preview.links.map((link: string) => decodeState(new URL(link).hash.slice(1)));
+  expect(custom.editor).toMatchObject({ name: null, doc: document, initial: document });
+  expect(custom.colour).toBe("#abcdef");
+  expect(preset.editor).toMatchObject({ name: "Sunny", doc: CATALOGUE.Sunny });
+  expect(new URL(preview.links[1]).hash).toBe("#shape=Sunny&colour=abcdef");
+});
+
+it("exports an unedited catalogue document as Material's own shape, like the website", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "shape-cli-"));
+  const heart = join(directory, "heart.json");
+  const edited = join(directory, "edited.json");
+  await writeFile(heart, JSON.stringify(CATALOGUE.Heart));
+  await writeFile(edited, JSON.stringify({ ...CATALOGUE.Heart, transforms: [{ type: "rotate", degrees: 45 }, { type: "normalize" }] }));
+  const exportCompose = async (file: string) => JSON.parse((await run(process.execPath, [cli, "export", "--document", file, "--target", "compose"])).stdout).code as string;
+  expect(await exportCompose(heart)).toContain("MaterialShapes.Heart.toShape()");
+  expect(await exportCompose(edited)).toContain("private val MyShape = RoundedPolygon");
 });
 
 it("rejects malformed preview items by field before rendering", async () => {

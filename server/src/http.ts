@@ -33,7 +33,7 @@ export function createHttpServer(config: ServiceConfig): Server {
   });
   app.get("/healthz", (_req, res) => res.json({ ok: true }));
   const handler = createMcpHandler(() => {
-    const server = new McpServer({ name: "material-shape-studio", version: "0.1.2" });
+    const server = new McpServer({ name: "material-shape-studio", version: "0.1.3" });
     registerShapeTools(server, jobs, config);
     return server;
   });

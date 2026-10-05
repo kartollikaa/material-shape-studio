@@ -26,11 +26,11 @@ Values use the controls' displayed units; custom dot geometry is included as JSO
 No account or server is needed. An invalid link opens the default shape with a
 dismissible notice.
 
-Shared `#doc=` links reopen the complete shape document in the editor, including shapes outside the
-catalogue. An imported shape can be adjusted and reset to its imported version. While you edit it, the
-address keeps the link you opened, so reopening it restores the imported shape; picking a Material
-shape switches back to named parameters. **Copy shape document** copies the current JSON, which is
-how edits to an imported shape travel back to an agent or developer. A malformed link opens the
+A shape from outside the catalogue, such as one an agent made, carries its whole document in a
+`document` parameter instead of `shape`, and its edits follow as the same named parameters. It can be
+adjusted and reset to its imported version, and the agent CLI links use exactly this address.
+Older `#doc=` links still open and are rewritten in the readable form. **Copy shape document** copies
+the current JSON, which is how edits travel back to an agent or developer. A malformed link opens the
 default shape with the same dismissible notice.
 
 The [Connect an agent](https://kartollikaa.github.io/material-shape-studio/connect/) page will explain the
@@ -98,7 +98,7 @@ androidx commit in `web/scripts/generate-catalogue.mjs`. Change the commit there
 
 ## The shared package
 
-`@material-shape-studio/core` owns the versioned shape document, generated catalogue, pure Compose/SVG/CSS exporters, and the browser-compatible share-link codec. The Studio imports them through this package. The codec carries a complete document and presentation fields in a compressed `#doc=` fragment. It bounds the compressed and decompressed payload before parsing. Engine validation still decides whether a shape's geometry is valid.
+`@material-shape-studio/core` owns the versioned shape document, generated catalogue, pure Compose/SVG/CSS exporters, the editor model, and the Studio address codec. The Studio, the CLI and the MCP all import them from this package, so an agent's link is the address the website writes. The core also keeps the decoder for older compressed `#doc=` links, which bounds the compressed and decompressed payload before parsing. Engine validation still decides whether a shape's geometry is valid.
 
 ## The engine package
 

@@ -1,12 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { deflateRawSync } from "node:zlib";
 import { build, buildCubics } from "@material-shape-studio/engine";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
-import { encodeShare, previewFrame } from "@material-shape-studio/core";
+import { decodeState, previewFrame, studioAddress, type SharedShape } from "@material-shape-studio/core";
 import { svgPath } from "../export/svg";
 import { displayName, mountStudio } from "./page";
-import { decodeState } from "./url-state";
 
 vi.mock("@material-shape-studio/engine", async (importOriginal) => {
   const engine = await importOriginal<typeof import("@material-shape-studio/engine")>();
@@ -17,6 +17,7 @@ const markup = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
 const body = markup.slice(markup.indexOf("<body>") + "<body>".length, markup.indexOf("</body>")).replace(/<script[\s\S]*?<\/script>/, "");
 
 const byId = (id: string) => document.getElementById(id)!;
+const legacyLink = (shared: SharedShape) => `#doc=${deflateRawSync(JSON.stringify(shared)).toString("base64url")}`;
 const click = (element: Element) => element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 const labels = (selector: string) => Array.from(document.querySelectorAll(selector)).map((e) => e.textContent);
 const exportCode = () => byId("export-code").textContent ?? "";
@@ -185,38 +186,62 @@ describe("the browser address", () => {
     expect(window.location.hash).toBe("");
   });
 
-  it("keeps a linked custom shape's imported link, with its presentation and reset baseline", async () => {
-    const link = await encodeShare({
-      document: { v: 1, shape: { kind: "ngon", vertices: 7 } },
-      presentation: { colour: "#123456", theme: "dark", context: "avatar" },
-    });
+  it("rewrites a legacy link as a readable address that keeps its colour, edits, and reset baseline", async () => {
+    const document_ = { v: 1 as const, shape: { kind: "ngon" as const, vertices: 7 } };
+    const link = legacyLink({ document: document_, presentation: { colour: "#123456", theme: "dark", context: "avatar" } });
     dispose();
     document.body.innerHTML = body;
     window.history.replaceState(null, "", link);
     dispose = mountStudio(document);
     await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Custom shape"));
     expect((byId("colour") as HTMLInputElement).value).toBe("#123456");
+    expect(window.location.hash).toBe(studioAddress({ document: document_, presentation: { colour: "#123456", theme: "light", context: "button" } }));
     slide("Sides", 9);
     openTab("svg");
-    expect(window.location.hash).toBe(link);
+    const edited = await decodeState(window.location.hash.slice(1));
+    expect(edited.editor.doc.shape).toEqual({ kind: "ngon", vertices: 9 });
+    expect(edited.editor.initial).toEqual(document_);
+    expect(edited.tab).toBe("svg");
     click(document.querySelector('[data-name="Heart"]')!);
     expect(window.location.hash).toContain("shape=Heart");
     click(byId("undo"));
     expect(slider("Sides").value).toBe("9");
-    expect(window.location.hash).toBe(link);
     const address = window.location.href;
     dispose();
     document.body.innerHTML = body;
     window.history.replaceState(null, "", address);
     dispose = mountStudio(document);
-    await vi.waitFor(() => expect(slider("Sides").value).toBe("7"));
-    slide("Sides", 9);
+    await vi.waitFor(() => expect(slider("Sides").value).toBe("9"));
+    expect(byId("shape-name").textContent).toBe("Custom shape");
     click(byId("reset"));
     expect(slider("Sides").value).toBe("7");
   });
 
-  it("keeps a decoding link through a tab change but lets a shape edit win", async () => {
-    const link = await encodeShare({
+  it("opens a legacy link to a catalogue document as that Material shape", async () => {
+    dispose();
+    document.body.innerHTML = body;
+    window.history.replaceState(null, "", legacyLink({ document: CATALOGUE.Heart, presentation: { colour: "#6750a4", theme: "light", context: "button" } }));
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Heart"));
+    expect(byId("shape-status").textContent).toBe("Material original");
+    expect(window.location.hash).toBe("#shape=Heart");
+  });
+
+  it("opens the address an agent links to as the same custom shape the website would write", async () => {
+    const document_ = { v: 1 as const, shape: { kind: "rectangle" as const, width: 2, height: 1.2, rounding: { radius: 0.3, smoothing: 0.6 } }, transforms: [{ type: "normalize" as const }] };
+    const address = studioAddress({ document: document_, presentation: { colour: "#6750a4", theme: "light", context: "button" } });
+    dispose();
+    document.body.innerHTML = body;
+    window.history.replaceState(null, "", address);
+    dispose = mountStudio(document);
+    await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Custom shape"));
+    expect(byId("shape-status").textContent).toBe("Custom shape");
+    expect(window.location.hash).toBe(address);
+    expect(slider("Softness").value).toBe("0.6");
+  });
+
+  it("keeps a decoding legacy link through a tab change but lets a shape edit win", async () => {
+    const link = legacyLink({
       document: { v: 1, shape: { kind: "ngon", vertices: 7 } },
       presentation: { colour: "#6750a4", theme: "light", context: "button" },
     });
@@ -225,7 +250,7 @@ describe("the browser address", () => {
     openTab("svg");
     await vi.waitFor(() => expect(byId("shape-name").textContent).toBe("Custom shape"));
     expect(document.querySelector('[data-tab="svg"]')!.getAttribute("aria-selected")).toBe("true");
-    expect(window.location.hash).toBe(link);
+    expect((await decodeState(window.location.hash.slice(1))).tab).toBe("svg");
     click(document.querySelector('[data-name="Heart"]')!);
     window.history.replaceState(null, "", link);
     window.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -248,7 +273,7 @@ describe("the studio page", () => {
     const doc = { v: 1 as const, shape: { kind: "ngon" as const, vertices: 7 } };
     dispose();
     document.body.innerHTML = body;
-    window.location.hash = await encodeShare({
+    window.location.hash = legacyLink({
       document: doc,
       presentation: { colour: "#6750a4", theme: "light", context: "button" },
     });

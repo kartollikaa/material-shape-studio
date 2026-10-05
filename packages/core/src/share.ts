@@ -9,8 +9,6 @@ export type ShapePresentation = {
 
 export type SharedShape = { document: ShapeDocument; presentation: ShapePresentation };
 
-const bytes = (value: string) => new TextEncoder().encode(value);
-
 function streamOf(data: Uint8Array): ReadableStream<BufferSource> {
   const copy = new Uint8Array(data.length);
   copy.set(data);
@@ -55,24 +53,10 @@ async function collect(stream: ReadableStream<Uint8Array>, limit: number): Promi
   return result;
 }
 
-function encodeBase64(data: Uint8Array): string {
-  let binary = "";
-  for (const byte of data) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
 function decodeBase64(value: string): Uint8Array {
   if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new Error("shape link payload is invalid");
   const binary = atob(value.replace(/-/g, "+").replace(/_/g, "/"));
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
-}
-
-export async function encodeShare(value: SharedShape): Promise<string> {
-  validate(value);
-  const payload = bytes(JSON.stringify(value));
-  if (payload.length > DEFAULT_LIMITS.maxDocumentBytes) throw new Error("shape link exceeds size limit");
-  const compressed = await collect(streamOf(payload).pipeThrough(new CompressionStream("deflate-raw")), DEFAULT_LIMITS.maxEncodedBytes);
-  return `#doc=${encodeBase64(compressed)}`;
 }
 
 export async function decodeShare(fragment: string): Promise<SharedShape> {

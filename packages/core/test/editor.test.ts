@@ -1,12 +1,12 @@
 import { build, buildCubics } from "@material-shape-studio/engine";
 import { describe, expect, it } from "vitest";
-import { CATALOGUE_NAMES } from "../catalogue";
-import type { Point } from "../document";
+import { CATALOGUE_NAMES } from "../src/catalogue";
+import type { Point } from "../src/document";
 import {
   addDot, canRemoveDot, fromDocument, History, isEdited, mainControls, moreControls, moveDot, pick, removeDot, restore, round3, snapshot,
   viewTransforms, type EditorState, type Radii,
-} from "./editor";
-import { backward, forward } from "./geometry";
+} from "../src/studio/editor";
+import { backward, forward } from "../src/studio/geometry";
 
 const PROTOTYPE_CONTROLS: Record<string, string> = {
   Arch: "Sides, Roundness, Rotate", Arrow: "Roundness, Rotate", Boom: "Repeats, Roundness, Rotate",

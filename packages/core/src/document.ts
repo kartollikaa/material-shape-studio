@@ -4,6 +4,8 @@ export type Rounding = { radius: number; smoothing?: number };
 
 export type Repeat = { count: number; mirror: boolean };
 
+export const SHAPE_KINDS = ["polygon", "ngon", "circle", "rectangle", "star", "pill", "pillStar", "features"] as const;
+
 export type Shape =
   | { kind: "polygon"; vertices: Point[]; rounding?: Rounding; perVertexRounding?: Rounding[]; center?: Point; repeat?: Repeat }
   | { kind: "ngon"; vertices: number; radius?: number; center?: Point; rounding?: Rounding; perVertexRounding?: Rounding[] }

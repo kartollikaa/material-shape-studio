@@ -65,7 +65,7 @@ The tool returns a standard MCP image result for hosts that display images. The 
 
 The PNG comparison uses the engine's exact cubics, the same geometry framing as the Studio, and fixed trusted preview templates. Photo and avatar examples use bundled assets, not agent-supplied remote URLs. The service never fetches arbitrary image URLs or renders arbitrary HTML.
 
-Links use the existing specified shape-document codec: `#doc=` contains base64url-encoded deflate-raw JSON. Colour and preview presentation may be separate validated fragment fields; they do not alter the geometry document. The website loads and validates the document before replacing the default shape. Malformed or excessive input retains a usable default editor and shows a dismissible explanation.
+Links use the Studio's own readable address codec from the [product specification](spec.md#url-codec), shared through `@material-shape-studio/core`, so an agent's link is the address the website itself would show for that shape: `shape=Name` for an unedited catalogue document, otherwise the URL-escaped document. Colour is a separate validated field; it does not alter the geometry document. The website loads and validates the document before replacing the default shape. Malformed or excessive input retains a usable default editor and shows a dismissible explanation.
 
 Custom documents arriving from MCP must be editable without falsely identifying them as unchanged catalogue entries. Imported geometry outside the unit square gets the export warning required by the main spec; it is not silently normalized into a different document.
 

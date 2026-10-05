@@ -41,23 +41,24 @@ engine/                 Gradle, Kotlin Multiplatform: jvm() + js()
   fixtures/             committed golden cubics, one JSON per document
 packages/engine/        npm package @material-shape-studio/engine; dist/ is copied from the
                         Kotlin/JS build (ES module + .d.mts), never committed
-packages/core/          shared shape documents, generated catalogue, pure exporters, and share codec
+packages/core/          shared shape documents, generated catalogue, pure exporters, the editor model,
+                        and the Studio address codec used by the website, CLI and MCP
 web/                    Vite + TypeScript, no UI framework; workspace member depending on the package above
   scripts/              generate-catalogue.mjs: the 35 MaterialShapes from Compose's source
   src/document.ts       compatibility re-export of shared shape document types
   src/catalogue/        compatibility re-export of the shared catalogue data
   src/export/           compatibility re-exports and the Kotlin round-trip test
-  src/studio/           editor state and controls (editor.ts), dot geometry, and the page (page.ts)
+  src/studio/           the page (page.ts) and its address synchronisation (address-sync.ts)
 .github/workflows       ci.yml (every PR), deploy.yml (main -> GitHub Pages)
 ```
 
 `npm install` works without a Gradle build because the package exists before its `dist/` is built.
 
-An external `#doc=` fragment is decoded with bounded decompression, then validated by the engine
+An agent's link opens through the same address codec as the editor, then the engine validates it
 before it replaces the current editor document. Imported documents have no catalogue identity and
 retain their own reset baseline. The user can copy the current JSON after editing and return it to
-an agent. An invalid `#doc=` link opens the default shape with the same dismissible notice as any
-other undecodable hash; shapes outside the unit square show a warning near the preview.
+an agent. An invalid link opens the default shape with the same dismissible notice as any other
+undecodable hash; shapes outside the unit square show a warning near the preview.
 Testing or running anything that imports the engine needs `./gradlew build` first, which runs the
 engine's tests and syncs the whole-program ES module and its `.d.mts` into `dist/`; `npm test` refuses
 to run without it. CI does both. `wasmJs` is a later optional target of the same module, not part of v1.
@@ -155,11 +156,18 @@ state; no share button is needed. Opening or editing the hash restores the edito
 hash restores the default shape, colour and export tab, and clears any link notice. The parameters
 can optionally declare `v=1`; other versions are rejected.
 
-A shape without a catalogue origin, such as a document from an agent, has no named parameters. Its
-address is the `#doc=` link it was opened from, unchanged while the shape is edited, so the link keeps
-the agent's presentation and reopening it restores the imported reset baseline; edits leave through
-**Copy shape document**. Opening a link decodes it asynchronously: a shape edit made before decoding
-finishes wins, while a tab or colour change keeps the link and the chosen tab.
+A shape without a catalogue origin, such as a document from an agent, replaces `shape` with
+`document`: the URL-escaped JSON of the document it was opened from, which is also its reset
+baseline. Its edits use the same named parameters and `geometry`, `base` and `transforms` overrides
+as a catalogue shape, so the address follows every edit. Exactly one of `shape` and `document` is
+present. The CLI and MCP build their links with this codec from `@material-shape-studio/core`: an
+unedited catalogue document links as `shape=Name`, anything else as `document`, with the colour in
+lowercase and the preview theme and context left out because the Studio has no use for them.
+
+Older agents linked a compressed `#doc=` fragment: base64url-encoded deflate-raw JSON of the
+document and its presentation. The Studio still opens one, decoding it asynchronously with bounded
+decompression, and then rewrites the address in the readable form. A shape edit made before decoding
+finishes wins, while a tab change keeps the chosen tab.
 
 A hash the codec cannot decode opens the default shape with a dismissible notice, never a blank
 page. Decoding bounds the address length, rejects unknown or duplicate parameters, validates control

@@ -6,3 +6,6 @@ export * from "./export/css";
 export * from "./limits";
 export * from "./share";
 export * from "./preview";
+export * from "./studio/editor";
+export * from "./studio/geometry";
+export * from "./studio/address";

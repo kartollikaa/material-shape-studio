@@ -1,16 +1,14 @@
 import { build, buildCubics, version } from "@material-shape-studio/engine";
-import { previewFrame } from "@material-shape-studio/core";
+import {
+  addDot, backward, canRemoveDot, DEFAULT_COLOUR, forward, fromDocument, History, isEdited, mainControls, moreControls, moveDot, pick, previewFrame,
+  removeDot, restore, round3, snapshot, squareAround, viewTransforms, type Box, type Control, type EditorState,
+} from "@material-shape-studio/core";
 import { CATALOGUE, CATALOGUE_NAMES } from "../catalogue";
 import type { ShapeDocument, Transform } from "../document";
 import { cssRule } from "../export/css";
 import { kotlinFile } from "../export/kotlin";
 import { svgFile, svgPath } from "../export/svg";
-import {
-  addDot, canRemoveDot, fromDocument, History, isEdited, mainControls, moreControls, moveDot, pick, removeDot, restore, round3, snapshot,
-  viewTransforms, type Control, type EditorState,
-} from "./editor";
-import { backward, forward, squareAround, type Box } from "./geometry";
-import { syncAddress } from "./url-state";
+import { syncAddress } from "./address-sync";
 
 type Tab = "compose" | "svg" | "png" | "css";
 type Built = { cubics: number[]; bounds: [number, number, number, number] };
@@ -33,7 +31,7 @@ export function mountStudio(page: Document) {
 
   // Controls close over the state they were built from, so every reassignment must be followed by render().
   let state: EditorState = pick("Cookie4Sided");
-  let colour = "#6750a4";
+  let colour = DEFAULT_COLOUR;
   let tab: Tab = "compose";
   let address: ReturnType<typeof syncAddress> | undefined;
   let dragging = false;

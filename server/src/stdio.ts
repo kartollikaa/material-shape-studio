@@ -7,7 +7,7 @@ import { localStudioUrl } from "./config";
 const studioUrl = localStudioUrl();
 
 void serveStdio(() => {
-  const server = new McpServer({ name: "material-shape-studio", version: "0.1.2" });
+  const server = new McpServer({ name: "material-shape-studio", version: "0.1.3" });
   registerShapeTools(server, new ShapeJobs(), { studioUrl });
   return server;
 });

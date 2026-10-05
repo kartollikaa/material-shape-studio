@@ -1,12 +1,12 @@
 import { parentPort } from "node:worker_threads";
 import { build, buildCubics, version } from "@material-shape-studio/engine";
-import { assertDocumentBudget, cssRule, kotlinFile, svgFile, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
+import { assertDocumentBudget, catalogueNameOf, cssRule, kotlinFile, svgFile, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
 import { comparisonPng } from "./preview";
 
 export type ShapeJob =
   | { kind: "create"; document: ShapeDocument }
   | { kind: "preview"; shapes: (SharedShape & { label: string })[] }
-  | { kind: "export"; shape: SharedShape; target: "compose" | "svg" | "css"; catalogueName?: string | null }
+  | { kind: "export"; shape: SharedShape; target: "compose" | "svg" | "css" }
   | { kind: "stall" };
 
 function stall(): never {
@@ -42,7 +42,7 @@ export function performJob(job: ShapeJob) {
   const { colour } = job.shape.presentation;
   if (job.target === "svg") return { code: svgFile(cubics, colour), mediaType: "image/svg+xml", filename: "shape.svg" };
   if (job.target === "css") return { code: cssRule(cubics), mediaType: "text/css", filename: "shape.css" };
-  return { code: kotlinFile(job.shape.document, { catalogueName: job.catalogueName ?? null, colour }), mediaType: "text/x-kotlin", filename: "MyShape.kt" };
+  return { code: kotlinFile(job.shape.document, { catalogueName: catalogueNameOf(job.shape.document), colour }), mediaType: "text/x-kotlin", filename: "MyShape.kt" };
 }
 
 parentPort?.on("message", (job: ShapeJob) => {
