@@ -7,7 +7,8 @@ import { documentSchema, shapeSchema } from "../src/schemas";
 import { performJob } from "../src/worker";
 
 const root = join(import.meta.dirname, "../..");
-const skillDirectory = join(root, "skills/material-shapes");
+const pluginDirectory = "plugins/material-shape-studio";
+const skillDirectory = join(root, pluginDirectory, "skills/material-shapes");
 const json = async (path: string) => JSON.parse(await readFile(join(root, path), "utf8"));
 const shapeDesign = () => readFile(join(skillDirectory, "references/shape-design.md"), "utf8");
 
@@ -36,8 +37,14 @@ it("pins the skill's CLI to the package and plugin version in SKILL.md only", as
     return [path.slice(skillDirectory.length + 1), found] as const;
   }));
   expect(Object.fromEntries(pins.filter(([, found]) => found.length))).toEqual({ "SKILL.md": [version] });
-  expect((await json(".claude-plugin/plugin.json")).version).toBe(version);
-  expect((await json("plugin.json")).version).toBe(version);
+  expect((await json(`${pluginDirectory}/.claude-plugin/plugin.json`)).version).toBe(version);
+  expect((await json(`${pluginDirectory}/plugin.json`)).version).toBe(version);
+});
+
+it("installs the plugin from its own directory, apart from the npm workspace", async () => {
+  expect((await json(".claude-plugin/marketplace.json")).plugins[0].source).toBe(`./${pluginDirectory}`);
+  expect((await json(".agents/plugins/marketplace.json")).plugins[0].source.path).toBe(`./${pluginDirectory}`);
+  expect(await readdir(join(root, pluginDirectory))).not.toContain("package.json");
 });
 
 it("names every shape document field, kind, and transform in the shape design reference", async () => {
