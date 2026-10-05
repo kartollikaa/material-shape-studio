@@ -33,11 +33,24 @@ Older `#doc=` links still open and are rewritten in the readable form. **Copy sh
 the current JSON, which is how edits travel back to an agent or developer. A malformed link opens the
 default shape with the same dismissible notice.
 
-The [Connect an agent](https://kartollikaa.github.io/material-shape-studio/connect/) page will explain the
-free local CLI, agent plugin, and optional stdio MCP after the package is published. Until then it shows
-an honest unavailable state. The CLI and MCP expose listing, creation, PNG comparison previews, and
+The [Connect an agent](https://kartollikaa.github.io/material-shape-studio/connect/) page installs the
+free local tools: a prompt to paste into any agent, the plugin from this repository's marketplace for
+Claude Code and Codex, an Add to Cursor link for the stdio MCP, and the plain CLI. Before the package is
+published it shows an honest unavailable state. The CLI and MCP expose listing, creation, PNG comparison previews, and
 Compose/SVG/CSS export; see [docs/mcp.md](docs/mcp.md). A remote HTTP prototype exists but is not the
 selected release path.
+
+In a Claude Code session, the plugin installs in one line:
+
+```
+/plugin install material-shape-studio --marketplace kartollikaa/material-shape-studio
+```
+
+In Codex, add the marketplace, then install Material Shape Studio from `/plugins`:
+
+```bash
+codex plugin marketplace add kartollikaa/material-shape-studio
+```
 
 Under it, the engine runs Google's `graphics-shapes` in the browser, so what you see is what
 Compose draws. Read in this order:
