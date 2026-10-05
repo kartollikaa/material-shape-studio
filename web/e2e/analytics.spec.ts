@@ -8,6 +8,7 @@ test("sends nothing to analytics from a browser driven by automation", async ({ 
   await page.goto("./#shape=Heart");
   await page.getByRole("button", { name: "Copy code" }).click();
   await page.getByRole("link", { name: "Connect an agent" }).click();
+  await expect(page).toHaveURL(/\/connect\/$/);
   await page.waitForLoadState("networkidle");
   expect(requests).toEqual([]);
 });
