@@ -1,5 +1,4 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import { inflateRawSync } from "node:zlib";
 
 const endpoint = process.argv[2];
 if (!endpoint) throw new Error("Pass the complete MCP endpoint URL");
@@ -20,9 +19,9 @@ try {
   const createdValue = created.structuredContent;
   if (JSON.stringify(createdValue.document) !== JSON.stringify(document)) throw new Error("Document changed during create");
   const link = new URL(createdValue.studioUrl);
-  if (!link.hash.startsWith("#doc=")) throw new Error("Editable Studio link missing");
-  const linked = JSON.parse(inflateRawSync(Buffer.from(link.hash.slice(5), "base64url")).toString("utf8"));
-  if (JSON.stringify(linked.document) !== JSON.stringify(document)) throw new Error("Linked document changed");
+  const linked = new URLSearchParams(link.hash.slice(1)).get("document");
+  if (!linked) throw new Error("Editable Studio link missing");
+  if (linked !== JSON.stringify(document)) throw new Error("Linked document changed");
   const image = preview.content.find((item) => item.type === "image");
   if (!image || Buffer.from(image.data, "base64").subarray(0, 8).toString("hex") !== "89504e470d0a1a0a") throw new Error("PNG preview missing");
   if (exported.structuredContent.mediaType !== "image/svg+xml") throw new Error("SVG export failed");
