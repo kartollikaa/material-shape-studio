@@ -349,8 +349,9 @@ loads the SDK lazily, and only in a production build, when `isSupported()` holds
 not driven by automation (`navigator.webdriver`, which covers the Playwright checks), and when the
 build was not made with `VITE_ANALYTICS=off`. Anywhere else `track` does nothing. The web config,
 API key included, is public by design and committed. The key is limited to Firebase's APIs and to
-the Pages origin as its referrer; Firebase drops every event when that check fails, so a local
-preview or a browser that sends no referrer reports nothing.
+the Pages origin as its referrer. That limits reuse of the key, not the events themselves: hits to
+Google Analytics carry no key, so a production build previewed locally in an ordinary browser does
+report to the live property. Build such a preview with `VITE_ANALYTICS=off`.
 
 Data appears under Analytics in the Firebase console for the project, or in its GA4 property;
 the Realtime report shows events within seconds of a visit. To build the site without analytics,

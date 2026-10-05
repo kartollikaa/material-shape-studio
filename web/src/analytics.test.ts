@@ -41,6 +41,16 @@ describe("loading Firebase", () => {
     expect(firebase.initializeAnalytics).not.toHaveBeenCalled();
   });
 
+  it("sends nothing through the wrapper when the browser does not support analytics", async () => {
+    firebase.isSupported.mockResolvedValueOnce(false);
+    const send = createAnalytics(loadFirebase);
+    send("connect_open", {});
+    await settled();
+    send("plugin_verify", {});
+    expect(firebase.logEvent).not.toHaveBeenCalled();
+    expect(firebase.isSupported).toHaveBeenCalledOnce();
+  });
+
   it("turns off automatic page views and reports the address without its hash", async () => {
     window.history.replaceState(null, "", "/material-shape-studio/#shape=Heart");
     const sink = await loadFirebase();
