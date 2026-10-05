@@ -5,26 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Connect an agent · Material Shape Studio</title>
     <meta name="description" content="Install Material Shape Studio's free agent plugin and local shape tools." />
+    <link rel="alternate" type="text/plain" href="./agent.txt" title="Agent connection instructions" />
     <link rel="stylesheet" href="../src/styles.css" />
   </head>
   <body>
     <header><div class="brand"><h1>Connect an agent</h1><p>Shape tools for coding agents</p></div><span class="spacer"></span><a href="../">Back to Studio</a></header>
     <main class="connect-main">
-      <section class="connect-card">
-        <h2>Connect Material Shape Studio</h2>
-        <p id="connection-state">Checking connection availability…</p>
-        <div id="connection-details" hidden>
-          <p>Give your agent this page, or copy the prompt below. The plugin teaches agents to use the CLI; local MCP is optional. Node.js 24 or newer runs the shape tools on your machine. Your agent host may ask you to approve installation.</p>
-          <p><strong>Plugin source</strong> <a href="https://github.com/kartollikaa/material-shape-studio">GitHub repository</a></p>
-          <p><strong>Package</strong> <code id="package-spec"></code> <button id="copy-package">Copy package</button></p>
-          <p><strong>Agent prompt</strong></p><pre id="prompt"></pre><button id="copy-prompt">Copy prompt</button>
-          <h3>CLI</h3><pre id="cli-command"></pre>
-          <h3>Optional MCP for Claude Code</h3><pre id="claude-command"></pre>
-          <h3>Optional MCP for Cursor</h3><p>Add a local stdio MCP server named <code>material-shape-studio</code> with command <code>npx</code> and arguments <code>--yes</code> and the package shown above. Keep your existing servers.</p>
-        </div>
-        <p><a href="./agent.txt">Plain-text instructions for agents</a></p>
-        <p id="copy-status" role="status"></p>
-      </section>
+      <!-- connection -->
+      <p class="agent-file">Agents: plain-text instructions are at <a href="./agent.txt">agent.txt</a>.</p>
+      <p id="copy-status" class="visually-hidden" role="status"></p>
     </main>
     <script type="module" src="../src/connect.ts"></script>
   </body>
