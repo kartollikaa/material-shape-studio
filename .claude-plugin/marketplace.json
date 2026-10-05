@@ -5,7 +5,7 @@
   "plugins": [
     {
       "name": "material-shape-studio",
-      "source": "./",
+      "source": "./plugins/material-shape-studio",
       "description": "Create and preview Material shapes with a local CLI"
     }
   ]
