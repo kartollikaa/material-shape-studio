@@ -16,7 +16,7 @@ it("creates, previews, and exports the same document", async () => {
   await writeFile(documentFile, JSON.stringify(document));
   const created = JSON.parse((await run(process.execPath, [cli, "create", "--document", documentFile])).stdout);
   expect(created.document).toEqual(document);
-  expect(new URL(created.studioUrl).hash).toBe(`#document=${encodeURIComponent(JSON.stringify(document)).replace(/%20/g, "+")}`);
+  expect(new URL(created.studioUrl).hash).toBe(`#${new URLSearchParams({ document: JSON.stringify(document) })}`);
   const input = join(directory, "comparison.json");
   const output = join(directory, "comparison.png");
   await writeFile(input, JSON.stringify([{ document, presentation: { colour: "#6750a4", theme: "light", context: "button" }, label: "Seven sides" }]));

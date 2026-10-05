@@ -1,14 +1,13 @@
-import { CATALOGUE, catalogueNameOf } from "../catalogue";
-import type { Rounding, ShapeDocument } from "../document";
+import { CATALOGUE } from "../catalogue";
+import { SHAPE_KINDS, type Rounding, type ShapeDocument } from "../document";
 import { assertDocumentBudget, DEFAULT_LIMITS } from "../limits";
 import type { SharedShape } from "../share";
-import { fromDocument, mainControls, moreControls, pick, round3, type EditorState, type Radii } from "./editor";
+import { mainControls, moreControls, openDocument, pick, round3, type EditorState, type Radii } from "./editor";
 
 export type SharedState = { v: 1; editor: EditorState; colour: string; tab: "compose" | "svg" | "png" | "css" };
 
 export const DEFAULT_COLOUR = "#6750a4";
 const MAX_ADDRESS_LENGTH = 4 * DEFAULT_LIMITS.maxDocumentBytes;
-const SHAPE_KINDS = ["polygon", "ngon", "circle", "rectangle", "star", "pill", "pillStar", "features"];
 const invalid = () => new Error("This address does not contain a valid editor state.");
 
 const CONTROL_PARAMS: Record<string, string> = {
@@ -22,7 +21,7 @@ function originEditor(params: URLSearchParams): EditorState {
   const name = params.get("shape");
   const source = params.get("document");
   if ((name === null) === (source === null)) throw invalid();
-  const editor = name !== null && Object.hasOwn(CATALOGUE, name) ? pick(name) : source !== null ? fromDocument(originDocument(source)) : null;
+  const editor = name !== null && Object.hasOwn(CATALOGUE, name) ? pick(name) : source !== null ? openDocument(originDocument(source)) : null;
   if (!editor) throw invalid();
   if (params.has("geometry")) editor.doc.shape = JSON.parse(params.get("geometry")!);
   if (params.has("transforms")) editor.doc.transforms = JSON.parse(params.get("transforms")!);
@@ -31,7 +30,7 @@ function originEditor(params: URLSearchParams): EditorState {
 
 function originDocument(source: string): ShapeDocument {
   const doc = JSON.parse(source);
-  if (!doc || typeof doc !== "object" || Array.isArray(doc) || doc.v !== 1 || !SHAPE_KINDS.includes(doc.shape?.kind)) throw invalid();
+  if (!doc || typeof doc !== "object" || Array.isArray(doc) || doc.v !== 1 || !(SHAPE_KINDS as readonly unknown[]).includes(doc.shape?.kind)) throw invalid();
   assertDocumentBudget(doc);
   return doc;
 }
@@ -85,7 +84,6 @@ export function encodeState(state: SharedState): string {
 function validate(value: SharedState): SharedState {
   const editor = value?.editor;
   const origin = editor?.name == null ? editor?.initial : Object.hasOwn(CATALOGUE, editor.name) ? CATALOGUE[editor.name] : undefined;
-  assertDocumentBudget(editor?.doc);
   if (value?.v !== 1 || !origin || !/^#[0-9a-f]{6}$/i.test(value.colour) ||
       !["compose", "svg", "png", "css"].includes(value.tab) ||
       editor.doc?.v !== 1 || editor.doc.shape?.kind !== origin.shape.kind ||
@@ -126,7 +124,5 @@ export function decodeState(payload: string): SharedState {
 }
 
 export function studioAddress({ document, presentation }: SharedShape): string {
-  const name = catalogueNameOf(document);
-  const editor = name ? pick(name) : fromDocument(document);
-  return `#${encodeState({ v: 1, editor, colour: presentation.colour.toLowerCase(), tab: "compose" })}`;
+  return `#${encodeState({ v: 1, editor: openDocument(document), colour: presentation.colour.toLowerCase(), tab: "compose" })}`;
 }

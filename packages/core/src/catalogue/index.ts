@@ -5,6 +5,8 @@ export const CATALOGUE_SOURCE: string = data.source;
 export const CATALOGUE = data.shapes as unknown as Record<string, ShapeDocument>;
 export const CATALOGUE_NAMES = Object.keys(CATALOGUE);
 
-const NAME_BY_DOCUMENT = new Map(CATALOGUE_NAMES.map((name) => [JSON.stringify(CATALOGUE[name]), name]));
+const canonical = (value: unknown): string => JSON.stringify(value, (_, node) =>
+  node && typeof node === "object" && !Array.isArray(node) ? Object.fromEntries(Object.entries(node).sort(([a], [b]) => (a < b ? -1 : 1))) : node);
+const NAME_BY_DOCUMENT = new Map(CATALOGUE_NAMES.map((name) => [canonical(CATALOGUE[name]), name]));
 
-export const catalogueNameOf = (doc: ShapeDocument): string | null => NAME_BY_DOCUMENT.get(JSON.stringify(doc)) ?? null;
+export const catalogueNameOf = (doc: ShapeDocument): string | null => NAME_BY_DOCUMENT.get(canonical(doc)) ?? null;

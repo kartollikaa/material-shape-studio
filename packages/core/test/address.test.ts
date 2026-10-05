@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CATALOGUE_NAMES } from "../src/catalogue";
-import { CATALOGUE } from "../src/catalogue";
+import { CATALOGUE, catalogueNameOf } from "../src/catalogue";
 import type { ShapeDocument } from "../src/document";
 import { addDot, fromDocument, mainControls, moreControls, moveDot, pick } from "../src/studio/editor";
 import { decodeState, encodeState, studioAddress } from "../src/studio/address";
@@ -62,6 +62,20 @@ describe("readable editor addresses", () => {
       expect(studioAddress({ document: CATALOGUE[name], presentation: { colour: "#6750a4", theme: "light", context: "button" } })).toBe(`#shape=${name}`);
     }
     expect(studioAddress({ document: CATALOGUE.Heart, presentation: { colour: "#ABCDEF", theme: "dark", context: "avatar" } })).toBe("#shape=Heart&colour=abcdef");
+  });
+
+  it("recognises a catalogue document whatever its key order, and opens it as that shape", () => {
+    const reordered = { transforms: CATALOGUE.Heart.transforms, shape: { ...CATALOGUE.Heart.shape }, v: 1 } as ShapeDocument;
+    expect(catalogueNameOf(reordered)).toBe("Heart");
+    expect(studioAddress({ document: reordered, presentation: { colour: "#6750a4", theme: "light", context: "button" } })).toBe("#shape=Heart");
+    expect(decodeState(`document=${encodeURIComponent(JSON.stringify(reordered))}`).editor.name).toBe("Heart");
+  });
+
+  it("reopens a shape the editor can build past the agent document budget", () => {
+    const saved = { ...state(), editor: pick("Cookie4Sided") };
+    mainControls(saved.editor).find((c) => c.label === "Repeats")!.set(16);
+    for (let i = 0; i < 40; i++) addDot(saved.editor);
+    expect(decodeState(encodeState(saved))).toEqual(JSON.parse(JSON.stringify(saved)));
   });
 
   it("gives a custom document a readable address that reopens it as the reset baseline", () => {

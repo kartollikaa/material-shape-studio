@@ -1,4 +1,4 @@
-import { CATALOGUE } from "../catalogue";
+import { CATALOGUE, catalogueNameOf } from "../catalogue";
 import type { Point, Rounding, Shape, ShapeDocument, Transform } from "../document";
 
 export type Radii = { rounding?: Rounding; innerRounding?: Rounding; perVertexRounding?: Rounding[] };
@@ -56,6 +56,11 @@ export function pick(name: string): EditorState {
 
 export function fromDocument(doc: ShapeDocument): EditorState {
   return fromBaseline(doc, null);
+}
+
+export function openDocument(doc: ShapeDocument): EditorState {
+  const name = catalogueNameOf(doc);
+  return name ? pick(name) : fromDocument(doc);
 }
 
 export const isEdited = (s: EditorState) => JSON.stringify(s.doc) !== JSON.stringify(s.initial);

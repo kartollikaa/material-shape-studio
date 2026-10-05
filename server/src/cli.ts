@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import type * as z from "zod/v4";
-import { CATALOGUE, CATALOGUE_NAMES, studioAddress, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
+import { CATALOGUE, CATALOGUE_NAMES, DEFAULT_COLOUR, studioAddress, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
 import { localStudioUrl } from "./config";
 import { ShapeJobs } from "./jobs";
 import { documentSchema, previewItemsSchema } from "./schemas";
@@ -17,7 +17,7 @@ function option(name: string): string | undefined {
 }
 
 function colourOption(): string {
-  const colour = option("colour") ?? "#6750a4";
+  const colour = option("colour") ?? DEFAULT_COLOUR;
   if (!/^#[0-9a-fA-F]{6}$/.test(colour)) throw new Error("--colour must be a hex colour");
   return colour.toLowerCase();
 }

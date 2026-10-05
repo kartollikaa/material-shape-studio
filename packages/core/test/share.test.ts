@@ -1,8 +1,11 @@
+import { deflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { decodeShare, encodeShare } from "../src/share";
+import { decodeShare } from "../src/share";
 import type { SharedShape } from "../src/share";
 
-describe("share links", () => {
+const legacyLink = (value: unknown) => `#doc=${deflateRawSync(JSON.stringify(value)).toString("base64url")}`;
+
+describe("legacy share links", () => {
   it("restores custom geometry and presentation without changing either", async () => {
     const value: SharedShape = {
       document: {
@@ -12,7 +15,7 @@ describe("share links", () => {
       },
       presentation: { colour: "#6750a4", theme: "dark", context: "avatar" },
     };
-    expect(await decodeShare(await encodeShare(value))).toEqual(value);
+    expect(await decodeShare(legacyLink(value))).toEqual(value);
   });
 
   it("rejects a compressed payload that expands beyond the input budget", async () => {
@@ -20,6 +23,6 @@ describe("share links", () => {
       document: { v: 1, shape: { kind: "features", serialized: "V1" + "A".repeat(100_000) } },
       presentation: { colour: "#6750a4", theme: "light", context: "button" },
     };
-    await expect(encodeShare(value)).rejects.toThrow(/size|large|limit/i);
+    await expect(decodeShare(legacyLink(value))).rejects.toThrow(/size|large|limit/i);
   });
 });

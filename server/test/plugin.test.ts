@@ -2,8 +2,8 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 import { buildCubics } from "@material-shape-studio/engine";
-import type { ShapeDocument } from "@material-shape-studio/core";
-import { documentSchema } from "../src/schemas";
+import { SHAPE_KINDS, type ShapeDocument } from "@material-shape-studio/core";
+import { documentSchema, shapeSchema } from "../src/schemas";
 import { performJob } from "../src/worker";
 
 const root = join(import.meta.dirname, "../..");
@@ -71,4 +71,8 @@ it("matches the reference's rule for how far a smoothed right-angle corner reach
     const runs = straightRuns({ v: 1, shape: { kind: "rectangle", width: 2, height: 1.2, rounding: { radius, smoothing } } });
     expect(runs[0], `radius ${radius}, smoothing ${smoothing}`).toBeCloseTo(shortSide, 4);
   }
+});
+
+it("accepts exactly the shape kinds the Studio address codec opens", () => {
+  expect(shapeSchema.options.map((option) => option.shape.kind.value)).toEqual([...SHAPE_KINDS]);
 });

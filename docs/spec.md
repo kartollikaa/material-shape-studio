@@ -48,7 +48,7 @@ web/                    Vite + TypeScript, no UI framework; workspace member dep
   src/document.ts       compatibility re-export of shared shape document types
   src/catalogue/        compatibility re-export of the shared catalogue data
   src/export/           compatibility re-exports and the Kotlin round-trip test
-  src/studio/           the page (page.ts), its address synchronisation, and re-exports of the editor
+  src/studio/           the page (page.ts) and its address synchronisation (address-sync.ts)
 .github/workflows       ci.yml (every PR), deploy.yml (main -> GitHub Pages)
 ```
 

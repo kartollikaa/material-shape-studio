@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
-import { CATALOGUE, CATALOGUE_NAMES, studioAddress, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
+import { CATALOGUE, CATALOGUE_NAMES, DEFAULT_COLOUR, SHAPE_KINDS, studioAddress, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
 import { documentSchema, previewItemsSchema } from "./schemas";
 import { ShapeJobs } from "./jobs";
 import type { ServiceConfig } from "./config";
@@ -18,12 +18,12 @@ export function registerShapeTools(server: McpServer, jobs: ShapeJobs, config: P
     inputSchema: z.object({ filter: z.string().max(80).optional() }).strict(),
   }, async ({ filter }): Promise<ToolResult> => {
     const names = CATALOGUE_NAMES.filter((name) => !filter || name.toLowerCase().includes(filter.toLowerCase()));
-    return textResult({ shapes: names.map((name) => ({ name, document: CATALOGUE[name] })), vocabulary: ["polygon", "ngon", "circle", "rectangle", "star", "pill", "pillStar", "features"] });
+    return textResult({ shapes: names.map((name) => ({ name, document: CATALOGUE[name] })), vocabulary: SHAPE_KINDS });
   });
 
   server.registerTool("create_shape", {
     description: "Validate a Material catalogue name or a complete editable shape document, and return its bounds and Studio link. Pass the returned document to preview_shapes or export_shape.",
-    inputSchema: z.object({ name: z.string().optional(), document: documentSchema.optional(), colour: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#6750a4") }).strict(),
+    inputSchema: z.object({ name: z.string().optional(), document: documentSchema.optional(), colour: z.string().regex(/^#[0-9a-fA-F]{6}$/).default(DEFAULT_COLOUR) }).strict(),
   }, async ({ name, document, colour }): Promise<ToolResult> => {
     try {
       if (!!name === !!document) throw new Error("provide exactly one of name or document");

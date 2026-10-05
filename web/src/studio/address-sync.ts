@@ -1,5 +1,5 @@
 import { build } from "@material-shape-studio/engine";
-import { decodeShare, decodeState, encodeState, fromDocument, type SharedState } from "@material-shape-studio/core";
+import { decodeShare, decodeState, encodeState, openDocument, type SharedState } from "@material-shape-studio/core";
 
 const LEGACY_LINK = "#doc=";
 
@@ -12,7 +12,7 @@ function decodeAddress(payload: string): SharedState {
 async function decodeLegacyLink(fragment: string, current: SharedState): Promise<SharedState> {
   const { document, presentation } = await decodeShare(fragment);
   build(JSON.stringify(document));
-  return { ...current, editor: fromDocument(document), colour: presentation.colour.toLowerCase() };
+  return { ...current, editor: openDocument(document), colour: presentation.colour.toLowerCase() };
 }
 
 export function syncAddress(view: Window, initial: SharedState, apply: (state: SharedState) => void, notice: (message: string) => void) {
