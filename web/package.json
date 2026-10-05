@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@material-shape-studio/core": "^0.1.0",
-    "@material-shape-studio/engine": "^0.1.0"
+    "@material-shape-studio/engine": "^0.1.0",
+    "firebase": "^12.19.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

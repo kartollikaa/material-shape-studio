@@ -88,7 +88,7 @@ ${indent(prompt, "  ")}
 }
 
 const escapeHtml = (text) => text.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const copyable = (text, label) => `<div class="command"><pre>${escapeHtml(text)}</pre><button type="button" class="small" data-copy aria-label="Copy ${escapeHtml(label)}">Copy</button></div>`;
+const copyable = (text, label, event = "") => `<div class="command"><pre>${escapeHtml(text)}</pre><button type="button" class="small" data-copy${event} aria-label="Copy ${escapeHtml(label)}">Copy</button></div>`;
 
 export function connectionHtml(instructions) {
   if (!instructions.available) {
@@ -101,8 +101,8 @@ export function connectionHtml(instructions) {
   const tab = (m, i) => `<button type="button" role="tab" id="tab-${m.id}" aria-controls="${m.id}" aria-selected="${i === 0}">${escapeHtml(m.host)}</button>`;
   const panel = (m) => `<article class="host" id="${m.id}" role="tabpanel" aria-labelledby="tab-${m.id}">
     <h3>${escapeHtml(m.host)} <span class="kind">${escapeHtml(m.kind)}</span></h3>
-    ${m.link ? `<p><a class="button primary" href="${escapeHtml(m.link.href)}">${escapeHtml(m.link.label)}</a></p>` : ""}
-    <ol class="steps">${m.steps.map((s) => `<li><p>${escapeHtml(s.label)}</p>${copyable(s.command, `${m.host} command`)}</li>`).join("")}</ol>
+    ${m.link ? `<p><a class="button primary" href="${escapeHtml(m.link.href)}" data-install="${m.id}">${escapeHtml(m.link.label)}</a></p>` : ""}
+    <ol class="steps">${m.steps.map((s) => `<li><p>${escapeHtml(s.label)}</p>${copyable(s.command, `${m.host} command`, ` data-install="${m.id}"`)}</li>`).join("")}</ol>
     <p class="note">${escapeHtml(m.note)}</p>
   </article>`;
   return `<section class="connect-intro">
@@ -113,7 +113,7 @@ export function connectionHtml(instructions) {
 <section class="connect-card" id="ask-agent">
   <h2><span class="step-number">1</span> Quickest: ask your agent</h2>
   <p>Paste this into your agent. It reads the instructions, picks the right install method and asks for your approval.</p>
-  ${copyable(prompt, "agent prompt")}
+  ${copyable(prompt, "agent prompt", ' data-install="agent"')}
 </section>
 <section class="connect-card" id="install">
   <h2><span class="step-number">2</span> Or install it yourself</h2>
@@ -123,7 +123,7 @@ export function connectionHtml(instructions) {
 <section class="connect-card" id="verify">
   <h2><span class="step-number">3</span> Check it works</h2>
   <p>This prints the Heart shape as JSON. Then ask your agent for a shape, for example “a soft, playful badge shape”.</p>
-  ${copyable(verifyCommand, "check command")}
+  ${copyable(verifyCommand, "check command", " data-verify")}
   <p class="note">Package <code id="package-spec">${escapeHtml(packageSpec)}</code> · <a href="https://github.com/${REPOSITORY}">Source on GitHub</a></p>
 </section>`;
 }

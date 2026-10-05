@@ -1,4 +1,6 @@
 import "./styles.css";
+import { track, trackPageView } from "./analytics";
 import { mountStudio } from "./studio/page";
 
-mountStudio(document);
+trackPageView(track, document);
+mountStudio(document, track);
