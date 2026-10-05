@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import type * as z from "zod/v4";
-import { CATALOGUE, CATALOGUE_NAMES, encodeShare, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
+import { CATALOGUE, CATALOGUE_NAMES, studioAddress, type ShapeDocument, type SharedShape } from "@material-shape-studio/core";
 import { localStudioUrl } from "./config";
 import { ShapeJobs } from "./jobs";
 import { documentSchema, previewItemsSchema } from "./schemas";
@@ -19,7 +19,7 @@ function option(name: string): string | undefined {
 function colourOption(): string {
   const colour = option("colour") ?? "#6750a4";
   if (!/^#[0-9a-fA-F]{6}$/.test(colour)) throw new Error("--colour must be a hex colour");
-  return colour;
+  return colour.toLowerCase();
 }
 
 function parsed<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -38,7 +38,7 @@ async function jsonFile(file: string | undefined): Promise<unknown> {
 async function main(): Promise<unknown> {
   const [command] = args;
   const site = localStudioUrl();
-  const studioUrl = async (shape: SharedShape) => site + await encodeShare(shape);
+  const studioUrl = (shape: SharedShape) => site + studioAddress(shape);
   if (command === "list") {
     const filter = option("filter")?.toLowerCase();
     return { shapes: CATALOGUE_NAMES.filter((name) => !filter || name.toLowerCase().includes(filter)).map((name) => ({ name, document: CATALOGUE[name] })) };
@@ -51,13 +51,13 @@ async function main(): Promise<unknown> {
     const colour = colourOption();
     const document = name ? CATALOGUE[name] : parsed(documentSchema, await jsonFile(file)) as ShapeDocument;
     const result = await jobs.run({ kind: "create", document }) as Record<string, unknown>;
-    return { ...result, studioUrl: await studioUrl({ document, presentation: { colour, theme: "light", context: "button" } }) };
+    return { ...result, studioUrl: studioUrl({ document, presentation: { colour, theme: "light", context: "button" } }) };
   }
   if (command === "preview") {
     const output = option("output");
     if (!output) throw new Error("--output PNG file is required");
     const shapes = parsed(previewItemsSchema, await jsonFile(option("input"))) as (SharedShape & { label: string })[];
-    const links = await Promise.all(shapes.map(({ document, presentation }) => studioUrl({ document, presentation })));
+    const links = shapes.map(({ document, presentation }) => studioUrl({ document, presentation }));
     const rendered = await jobs.run({ kind: "preview", shapes }) as { png: string };
     await writeFile(output, Buffer.from(rendered.png, "base64"), { flag: "wx" });
     return { output, links, mediaType: "image/png" };

@@ -27,10 +27,12 @@ coordinates you write, and Material's own polygons use the unit square with the 
   shape read as a circle. A unit-square `polygon` is half that size, so halve those numbers.
 - A radius larger than the neighbouring edges allow is shrunk to fit; it never overshoots. A huge
   radius just means "as round as possible".
-- `smoothing` (0 to 1) changes the curve, not its size. 0 is a circular arc that meets the edge with
-  a visible kink in curvature; 1 starts the curve further along the edge and blends it in, giving a
-  squircle-like, more expensive-looking softness. 0.5 to 1 suits soft UI; 0 suits crisp,
-  geometric shapes.
+- `smoothing` (0 to 1) blends the curve into the edge, and in doing so makes the corner longer. 0 is
+  a circular arc that meets the edge with a visible kink in curvature; 1 blends it in for a
+  squircle-like softness. At a right angle the rounding reaches `radius × (1 + smoothing)` along each
+  edge, so smoothing 1 doubles how much of every side a corner eats. Pick the radius with smoothing
+  already counted: 0.5 to 1 suits soft UI only where the sides are long enough to keep a straight run;
+  0 suits crisp, geometric shapes.
 - `perVertexRounding` gives each corner its own rounding. Its length must equal the number of
   corners the kind builds (listed per kind below); `rounding` is ignored where it is given.
 - Mixing radii is where character comes from: big on the corners that should feel soft, near 0 on
@@ -57,8 +59,11 @@ All kinds except `circle`, `pill`, and `features` take `rounding` and `perVertex
 - **`circle`**: `vertices` only changes how the circle is approximated for morphing; leave it.
 - **`ngon`**: a regular polygon. With rounding 0.4 to 0.6 it becomes a soft triangle, square, or
   pentagon. Odd counts point right; rotate −90 to point a corner up.
-- **`rectangle`**: `width` and `height` set the proportions. Rounding up to half the short side; a
-  square with `{"radius": 0.8, "smoothing": 1}` is a squircle.
+- **`rectangle`**: `width` and `height` set the proportions; a square with
+  `{"radius": 0.8, "smoothing": 1}` is a squircle. A rounded rectangle, such as a button or card,
+  needs a straight run on its short sides: keep `radius × (1 + smoothing)` at most 0.3 of the short
+  side, as in `RoundedRect` below. Once it reaches half the short side the ends are fully round and
+  the shape reads as a pill; when that is the goal, use `pill`.
 - **`star`**: `verticesPerRadius` is the number of points. `innerRadius` (must stay below `radius`)
   is the depth of the valleys and decides the character:
 
@@ -151,7 +156,7 @@ Read a preset with `shape-studio list --filter NAME` and learn from its numbers.
 
 | The developer says | Start from | Push these |
 |---|---|---|
-| soft, calm, friendly | `rectangle` or `ngon` 3 to 5 | rounding 0.4 to 0.8, `smoothing` 0.6 to 1 |
+| soft, calm, friendly | `rectangle` or `ngon` 3 to 5 | rounding 0.4 to 0.8, `smoothing` 0.6 to 1; on a wide `rectangle`, the short-side limit above |
 | organic, pebble, blob, hand-made | `polygon`, 5 to 7 irregular points, no `repeat` | rounding 0.25 to 0.45 (already unit-square units), uneven `perVertexRounding` |
 | playful, bouncy, cute | `star` 4 to 7 points | `innerRadius` 0.7 to 0.85, rounding 0.3 to 0.5, or a cloud with `innerRounding` 0 |
 | celebratory, sale, "new" | `star` or `pillStar` 10 to 16 points | `innerRadius` 0.6 to 0.8, rounding at most 0.05 |
@@ -174,6 +179,10 @@ Starting points to copy into a document file. They are not catalogue entries, so
 
 ```json
 {"v": 1, "name": "Seal", "shape": {"kind": "star", "verticesPerRadius": 12, "innerRadius": 0.75, "rounding": {"radius": 0.03}}, "transforms": [{"type": "normalize"}]}
+```
+
+```json
+{"v": 1, "name": "RoundedRect", "shape": {"kind": "rectangle", "width": 2, "height": 1.2, "rounding": {"radius": 0.25, "smoothing": 0.4}}, "transforms": [{"type": "normalize"}]}
 ```
 
 ```json

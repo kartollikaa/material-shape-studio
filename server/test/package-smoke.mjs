@@ -17,6 +17,8 @@ try {
   const cli = join(install, "node_modules", ".bin", "shape-studio");
   const listed = JSON.parse(execFileSync(cli, ["list", "--filter", "Heart"], { encoding: "utf8" }));
   if (listed.shapes.length !== 1 || listed.shapes[0].name !== "Heart") throw new Error("installed CLI failed");
+  const created = JSON.parse(execFileSync(cli, ["create", "--name", "Heart"], { encoding: "utf8" }));
+  if (!created.studioUrl.endsWith("#shape=Heart")) throw new Error("installed CLI does not link the website's readable address");
   const comparison = join(directory, "comparison.json");
   const png = join(directory, "comparison.png");
   await writeFile(comparison, JSON.stringify([{ document: listed.shapes[0].document, presentation: { colour: "#6750a4", theme: "light", context: "photo" }, label: "Heart" }]));
@@ -29,7 +31,7 @@ try {
     const { tools } = await client.listTools();
     if (tools.length !== 4) throw new Error("installed MCP tools missing");
     const created = await client.callTool({ name: "create_shape", arguments: { document: { v: 1, shape: { kind: "ngon", vertices: 7 } } } });
-    if (created.isError || !(created.structuredContent?.studioUrl?.toString().includes("#doc="))) throw new Error("installed MCP shape creation failed");
+    if (created.isError || !(created.structuredContent?.studioUrl?.toString().includes("#document="))) throw new Error("installed MCP shape creation failed");
   } finally {
     await client.close();
   }

@@ -1,12 +1,14 @@
-import { build } from "@material-shape-studio/engine";
-import { decodeShare } from "@material-shape-studio/core";
-import { CATALOGUE } from "../catalogue";
-import type { Rounding } from "../document";
+import { CATALOGUE, catalogueNameOf } from "../catalogue";
+import type { Rounding, ShapeDocument } from "../document";
+import { assertDocumentBudget, DEFAULT_LIMITS } from "../limits";
+import type { SharedShape } from "../share";
 import { fromDocument, mainControls, moreControls, pick, round3, type EditorState, type Radii } from "./editor";
 
 export type SharedState = { v: 1; editor: EditorState; colour: string; tab: "compose" | "svg" | "png" | "css" };
 
-const MAX_ADDRESS_LENGTH = 100_000;
+export const DEFAULT_COLOUR = "#6750a4";
+const MAX_ADDRESS_LENGTH = 4 * DEFAULT_LIMITS.maxDocumentBytes;
+const SHAPE_KINDS = ["polygon", "ngon", "circle", "rectangle", "star", "pill", "pillStar", "features"];
 const invalid = () => new Error("This address does not contain a valid editor state.");
 
 const CONTROL_PARAMS: Record<string, string> = {
@@ -16,15 +18,30 @@ const CONTROL_PARAMS: Record<string, string> = {
 };
 const controlsOf = (editor: EditorState) => [...mainControls(editor), ...moreControls(editor)];
 
-function readParams(params: URLSearchParams): SharedState {
+function originEditor(params: URLSearchParams): EditorState {
   const name = params.get("shape");
-  const known = new Set(["shape", "v", "selected", "colour", "tab", "geometry", "base", "transforms", ...Object.values(CONTROL_PARAMS)]);
-  for (const key of params.keys()) if (!known.has(key) || params.getAll(key).length !== 1) throw invalid();
-  if (!name || !Object.hasOwn(CATALOGUE, name) || (params.has("v") && params.get("v") !== "1")) throw invalid();
-  const editor = pick(name);
+  const source = params.get("document");
+  if ((name === null) === (source === null)) throw invalid();
+  const editor = name !== null && Object.hasOwn(CATALOGUE, name) ? pick(name) : source !== null ? fromDocument(originDocument(source)) : null;
+  if (!editor) throw invalid();
   if (params.has("geometry")) editor.doc.shape = JSON.parse(params.get("geometry")!);
-  if (params.has("base")) editor.base = JSON.parse(params.get("base")!);
   if (params.has("transforms")) editor.doc.transforms = JSON.parse(params.get("transforms")!);
+  return editor;
+}
+
+function originDocument(source: string): ShapeDocument {
+  const doc = JSON.parse(source);
+  if (!doc || typeof doc !== "object" || Array.isArray(doc) || doc.v !== 1 || !SHAPE_KINDS.includes(doc.shape?.kind)) throw invalid();
+  assertDocumentBudget(doc);
+  return doc;
+}
+
+function readParams(params: URLSearchParams): SharedState {
+  const known = new Set(["shape", "document", "v", "selected", "colour", "tab", "geometry", "base", "transforms", ...Object.values(CONTROL_PARAMS)]);
+  for (const key of params.keys()) if (!known.has(key) || params.getAll(key).length !== 1) throw invalid();
+  if (params.has("v") && params.get("v") !== "1") throw invalid();
+  const editor = originEditor(params);
+  if (params.has("base")) editor.base = JSON.parse(params.get("base")!);
   if (params.has("selected")) {
     if (!/^\d+$/.test(params.get("selected")!)) throw invalid();
     editor.selected = Number(params.get("selected"));
@@ -38,20 +55,19 @@ function readParams(params: URLSearchParams): SharedState {
     if (!Number.isFinite(value) || value < control.min || value > control.max) throw invalid();
     if (value !== control.get()) control.set(value);
   }
-  return { v: 1, editor, colour: `#${params.get("colour") ?? "6750a4"}`, tab: (params.get("tab") ?? "compose") as SharedState["tab"] };
+  return { v: 1, editor, colour: `#${params.get("colour") ?? DEFAULT_COLOUR.slice(1)}`, tab: (params.get("tab") ?? "compose") as SharedState["tab"] };
 }
 
 export function encodeState(state: SharedState): string {
   const editor = state.editor;
-  if (editor.name === null) throw invalid();
-  const params = new URLSearchParams({ shape: editor.name });
-  const original = new Map(controlsOf(pick(editor.name)).map((c) => [c.label, c.get()]));
+  const params = new URLSearchParams(editor.name === null ? { document: JSON.stringify(editor.initial) } : { shape: editor.name });
+  const original = new Map(controlsOf(originEditor(params)).map((c) => [c.label, c.get()]));
   for (const control of controlsOf(editor)) {
-    if (control.label === "Roundness of the selected dot" || control.get() === original.get(control.label)) continue;
+    if (control.label === "Roundness of the selected dot" || !original.has(control.label) || control.get() === original.get(control.label)) continue;
     params.set(CONTROL_PARAMS[control.label], String(round3(control.get() * (control.scale ?? 1))));
   }
   if (editor.selected) params.set("selected", String(editor.selected));
-  if (state.colour !== "#6750a4") params.set("colour", state.colour.slice(1));
+  if (state.colour !== DEFAULT_COLOUR) params.set("colour", state.colour.slice(1));
   if (state.tab !== "compose") params.set("tab", state.tab);
   const rebuilt = readParams(params).editor;
   for (const [key, value, expected] of [
@@ -68,10 +84,11 @@ export function encodeState(state: SharedState): string {
 
 function validate(value: SharedState): SharedState {
   const editor = value?.editor;
-  const original = editor?.name != null && Object.hasOwn(CATALOGUE, editor.name) ? CATALOGUE[editor.name] : undefined;
-  if (value?.v !== 1 || !original || !/^#[0-9a-f]{6}$/i.test(value.colour) ||
+  const origin = editor?.name == null ? editor?.initial : Object.hasOwn(CATALOGUE, editor.name) ? CATALOGUE[editor.name] : undefined;
+  assertDocumentBudget(editor?.doc);
+  if (value?.v !== 1 || !origin || !/^#[0-9a-f]{6}$/i.test(value.colour) ||
       !["compose", "svg", "png", "css"].includes(value.tab) ||
-      editor.doc?.v !== 1 || editor.doc.shape?.kind !== original.shape.kind ||
+      editor.doc?.v !== 1 || editor.doc.shape?.kind !== origin.shape.kind ||
       !Number.isFinite(editor.roundness) || editor.roundness < 0 || editor.roundness > 2.5 ||
       !Number.isInteger(editor.selected) || editor.selected < 0 || !editor.base) throw invalid();
   const shape = editor.doc.shape;
@@ -99,7 +116,7 @@ function validate(value: SharedState): SharedState {
     if (node && typeof node === "object") Object.values(node).forEach((child) => checkNumbers(child, depth + 1));
   };
   checkNumbers(editor.doc);
-  build(JSON.stringify(editor.doc));
+  checkNumbers(editor.initial);
   return value;
 }
 
@@ -108,82 +125,8 @@ export function decodeState(payload: string): SharedState {
   return validate(readParams(new URLSearchParams(payload)));
 }
 
-type ShapeLink = { fragment: string; initial: string };
-
-async function decodeShapeLink(fragment: string, current: SharedState): Promise<SharedState> {
-  const { document, presentation } = await decodeShare(fragment);
-  build(JSON.stringify(document));
-  return { ...current, editor: fromDocument(document), colour: presentation.colour };
-}
-
-export function syncAddress(view: Window, initial: SharedState, apply: (state: SharedState) => void, notice: (message: string) => void) {
-  let disposed = false;
-  let revision = 0;
-  let latest = initial;
-  let link: ShapeLink | undefined;
-  const defaults = JSON.stringify(initial);
-  let previous = defaults;
-  const write = (payload: string) => {
-    const url = new URL(view.location.href);
-    url.hash = payload;
-    view.history.replaceState(view.history.state, "", url);
-  };
-  const show = (state: SharedState) => {
-    previous = JSON.stringify(state);
-    latest = state;
-    apply(state);
-  };
-  const restoreDefaults = () => {
-    link = undefined;
-    show(JSON.parse(defaults));
-    notice("This link could not be opened. The default shape is shown.");
-  };
-  const load = () => {
-    if (disposed) return;
-    const current = ++revision;
-    const hash = view.location.hash;
-    if (!hash) {
-      link = undefined;
-      show(JSON.parse(defaults));
-      return;
-    }
-    if (hash.startsWith("#doc=")) {
-      const editorAtStart = JSON.stringify(latest.editor);
-      decodeShapeLink(hash, latest).then((state) => {
-        if (disposed || current !== revision || JSON.stringify(latest.editor) !== editorAtStart) return;
-        link = { fragment: hash, initial: JSON.stringify(state.editor.initial) };
-        show({ ...state, tab: latest.tab });
-        if (view.location.hash !== hash) write(hash);
-      }).catch(() => { if (!disposed && current === revision) restoreDefaults(); });
-      return;
-    }
-    try {
-      link = undefined;
-      show(decodeState(hash.slice(1)));
-    } catch {
-      if (!disposed) restoreDefaults();
-    }
-  };
-  load();
-  view.addEventListener("hashchange", load);
-  return {
-    update(state: SharedState) {
-      latest = state;
-      const json = JSON.stringify(state);
-      if (json === previous || disposed) return;
-      previous = json;
-      try {
-        let payload: string;
-        if (state.editor.name !== null) payload = encodeState(state);
-        else if (link && link.initial === JSON.stringify(state.editor.initial)) payload = link.fragment;
-        else return;
-        write(payload);
-      } catch {
-        if (disposed) return;
-        previous = "";
-        notice("The address could not be updated. Your edits are still available here.");
-      }
-    },
-    dispose() { disposed = true; view.removeEventListener("hashchange", load); },
-  };
+export function studioAddress({ document, presentation }: SharedShape): string {
+  const name = catalogueNameOf(document);
+  const editor = name ? pick(name) : fromDocument(document);
+  return `#${encodeState({ v: 1, editor, colour: presentation.colour.toLowerCase(), tab: "compose" })}`;
 }

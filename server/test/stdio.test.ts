@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { decodeState } from "@material-shape-studio/core";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
@@ -12,7 +13,9 @@ it("runs all shape tools through the packaged local process", async () => {
     const created = await client.callTool({ name: "create_shape", arguments: { document } });
     expect(created.isError).not.toBe(true);
     expect(created.structuredContent).toMatchObject({ document });
-    expect((created.structuredContent as { studioUrl: string }).studioUrl).toMatch(/^https:\/\/kartollikaa\.github\.io\/material-shape-studio\/#doc=/);
+    const studioUrl = new URL((created.structuredContent as { studioUrl: string }).studioUrl);
+    expect(studioUrl.origin + studioUrl.pathname).toBe("https://kartollikaa.github.io/material-shape-studio/");
+    expect(decodeState(studioUrl.hash.slice(1)).editor.initial).toEqual(document);
     const preview = await client.callTool({ name: "preview_shapes", arguments: { shapes: [{ document, presentation: { colour: "#6750a4", theme: "light", context: "button" }, label: "Seven sides" }] } });
     expect(preview.isError).not.toBe(true);
     expect(preview.content).toContainEqual(expect.objectContaining({ type: "image", mimeType: "image/png" }));

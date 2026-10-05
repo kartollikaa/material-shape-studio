@@ -10,7 +10,7 @@ import {
   viewTransforms, type Control, type EditorState,
 } from "./editor";
 import { backward, forward, squareAround, type Box } from "./geometry";
-import { syncAddress } from "./url-state";
+import { syncAddress } from "./address-sync";
 
 type Tab = "compose" | "svg" | "png" | "css";
 type Built = { cubics: number[]; bounds: [number, number, number, number] };

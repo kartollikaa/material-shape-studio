@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
+import { buildCubics } from "@material-shape-studio/engine";
 import type { ShapeDocument } from "@material-shape-studio/core";
 import { documentSchema } from "../src/schemas";
 import { performJob } from "../src/worker";
@@ -51,5 +52,23 @@ it("builds every example document in the shape design reference without warnings
   for (const example of examples) {
     const document = documentSchema.parse(example) as ShapeDocument;
     expect(performJob({ kind: "create", document }), JSON.stringify(example)).toMatchObject({ warnings: [] });
+  }
+});
+
+it("matches the reference's rule for how far a smoothed right-angle corner reaches along each edge", () => {
+  const straightRuns = (document: object) => {
+    const cubics = Array.from(buildCubics(JSON.stringify(document)));
+    const runs: number[] = [];
+    for (let i = 0; i < cubics.length; i += 8) {
+      const [x0, y0, x1, y1, x2, y2, x3, y3] = cubics.slice(i, i + 8);
+      const offLine = (x: number, y: number) => Math.abs((x - x0) * (y3 - y0) - (y - y0) * (x3 - x0));
+      if (offLine(x1, y1) < 1e-6 && offLine(x2, y2) < 1e-6) runs.push(Math.hypot(x3 - x0, y3 - y0));
+    }
+    return runs.sort((a, b) => a - b);
+  };
+  for (const [radius, smoothing] of [[0.3, 0], [0.3, 0.6], [0.25, 0.4], [0.2, 1]]) {
+    const shortSide = 1.2 - 2 * radius * (1 + smoothing);
+    const runs = straightRuns({ v: 1, shape: { kind: "rectangle", width: 2, height: 1.2, rounding: { radius, smoothing } } });
+    expect(runs[0], `radius ${radius}, smoothing ${smoothing}`).toBeCloseTo(shortSide, 4);
   }
 });

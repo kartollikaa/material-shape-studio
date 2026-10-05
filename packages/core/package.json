@@ -9,9 +9,11 @@
     "./export/repeat": "./src/export/repeat.ts"
   },
   "scripts": {
+    "pretest": "node ../engine/scripts/require-dist.mjs",
     "test": "vitest run test && tsc --noEmit"
   },
   "devDependencies": {
+    "@material-shape-studio/engine": "^0.1.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.2"
   }
